@@ -60,7 +60,7 @@ complete -x -c yadm -n '__fish_yadm_using_command introspect' -a (printf -- '%s\
 complete -x -c yadm -n '__fish_yadm_needs_command' -a 'gitconfig' -d 'Pass options to the git config command'
 complete -x -c yadm -n '__fish_yadm_needs_command' -a 'config'    -d 'Configure a setting'
 for name in (yadm introspect configs)
-    complete -x -c yadm -n '__fish_yadm_using_command config' -a '$name' -d 'yadm config'
+    complete -x -c yadm -n '__fish_yadm_using_command config' -a $name -d 'yadm config'
 end
 
 # yadm universial options
