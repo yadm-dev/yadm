@@ -326,3 +326,32 @@ def test_no_repo(
 def verify_head(paths, branch):
     """Assert the local repo has the correct head branch"""
     assert paths.repo.join("HEAD").read() == f"ref: refs/heads/{branch}\n"
+
+
+@pytest.mark.usefixtures("remote")
+def test_clone_subdirectory(runner, paths, yadm_cmd, repo_config):
+    """Test clone from sub-directory of YADM_WORK"""
+
+    # clear out the work path
+    paths.work.remove()
+    paths.work.mkdir()
+
+    # create sub-directory
+    subdir = paths.work.mkdir("subdir")
+
+    # determine remote url
+    remote_url = f"file://{paths.remote}"
+
+    # run the clone command
+    args = ["clone", "-w", paths.work]
+    args += [remote_url]
+    run = runner(command=yadm_cmd(*args), cwd=subdir)
+
+    # clone should succeed, and repo should be configured properly
+    assert successful_clone(run, paths, repo_config)
+
+    # test that the conflicts are preserved in the work tree
+    run = runner(command=yadm_cmd("status", "-uno", "--porcelain"), cwd=subdir)
+    assert run.success
+    assert run.out == ""
+    assert run.err == ""
