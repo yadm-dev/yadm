@@ -461,7 +461,7 @@ EOF
     -v distro="$local_distro" \
     -v distro_family="$local_distro_family" \
     -v source="$input" \
-    -v source_dir="$(dirname "$input")" \
+    -v source_dir="$(builtin_dirname "$input")" \
     -v classes="$(join_string $'\n' "${local_classes[@]}")" \
     "$awk_pgm" \
     "$input" > "$temp_file" || rm -f "$temp_file"
@@ -692,9 +692,21 @@ function alt_linking() {
   local alt_sources=()
   local alt_template_cmds=()
 
-  for alt_path in $(for tracked in "${tracked_files[@]}"; do printf "%s\n" "$tracked" "${tracked%/*}"; done | LC_ALL=C sort -u) "${ENCRYPT_INCLUDE_FILES[@]}"; do
-    alt_path="$YADM_BASE/$alt_path"
-    if [[ "$alt_path" =~ .\#\#. ]]; then
+  for tracked_file in $(printf "%s\n" "${tracked_files[@]}" | LC_ALL=C sort -u) "${ENCRYPT_INCLUDE_FILES[@]}"; do
+    tracked_file="$YADM_BASE/$tracked_file"
+    if [[ "$tracked_file" =~ .\#\#. ]]; then
+      local alt_path=$tracked_file
+
+      # Walk up the path until we find the last component with a ## marker;
+      # that will be the source of the alt symlink
+      while : ; do
+        local tmp;
+        tmp="$(builtin_dirname "$alt_path")"
+        [[ "$tmp" =~ .\#\#. ]] || break
+        alt_path=$tmp
+      done
+
+      debug "Found alt at '$alt_path'"
       if [ -e "$alt_path" ] ; then
         score_file "$alt_path"
       fi

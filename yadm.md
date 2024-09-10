@@ -488,7 +488,7 @@
        then no link will be created.
 
        Links  are also created for directories named this way, as long as they
-       have at least one yadm managed file within them (at the top level).
+       have at least one yadm managed file as a descendant.
 
        yadm will automatically create these links by default. This can be dis‐
        abled  using  the yadm.auto-alt configuration.  Even if disabled, links
