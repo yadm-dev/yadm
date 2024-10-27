@@ -1,4 +1,5 @@
 """Unit tests: template_default"""
+
 import os
 
 FILE_MODE = 0o754
@@ -12,6 +13,7 @@ LOCAL_HOST = "default_Test+@-!^Host"
 LOCAL_USER = "default_Test+@-!^User"
 LOCAL_DISTRO = "default_Test+@-!^Distro"
 LOCAL_DISTRO_FAMILY = "default_Test+@-!^Family"
+ENV_VAR = "default_Test+@-!^Env"
 TEMPLATE = f"""
 start of template
 default class         = >{{{{yadm.class}}}}<
@@ -30,6 +32,9 @@ Included section from else
 {{% if yadm.class == "wrongclass1" %}}
 wrong class 1
 {{% endif %}}
+{{% if yadm.class != "wronglcass" %}}
+Included section from !=
+{{%     endif\t\t  %}}
 {{% if yadm.class == "{LOCAL_CLASS}" %}}
 Included section for class = {{{{yadm.class}}}} ({{{{yadm.class}}}} repeated)
 Multiple lines
@@ -97,6 +102,13 @@ Included section for distro_family = \
 {{% if yadm.distro_family == "wrongfamily2" %}}
 wrong family 2
 {{% endif %}}
+{{% if env.VAR == "{ENV_VAR}" %}}
+Included section for env.VAR = {{{{env.VAR}}}} ({{{{env.VAR}}}} again)
+{{% endif %}}
+{{% if env.VAR == "wrongenvvar" %}}
+wrong env.VAR
+{{% endif %}}
+yadm.no_such_var="{{{{ yadm.no_such_var }}}}" and env.NO_SUCH_VAR="{{{{ env.NO_SUCH_VAR }}}}"
 end of template
 """
 EXPECTED = f"""
@@ -111,6 +123,7 @@ default distro_family = >{LOCAL_DISTRO_FAMILY}<
 classes = >{LOCAL_CLASS2}
 {LOCAL_CLASS}<
 Included section from else
+Included section from !=
 Included section for class = {LOCAL_CLASS} ({LOCAL_CLASS} repeated)
 Multiple lines
 Included section for second class
@@ -121,6 +134,8 @@ Included section for user = {LOCAL_USER} ({LOCAL_USER} repeated)
 Included section for distro = {LOCAL_DISTRO} ({LOCAL_DISTRO} again)
 Included section for distro_family = \
 {LOCAL_DISTRO_FAMILY} ({LOCAL_DISTRO_FAMILY} again)
+Included section for env.VAR = {ENV_VAR} ({ENV_VAR} again)
+yadm.no_such_var="" and env.NO_SUCH_VAR=""
 end of template
 """
 
@@ -138,7 +153,7 @@ The first line
 An empty file removes the line above
 {%include basic%}
 {% include "./variables.{{ yadm.os }}"  %}
-{% include dir/nested %}
+  {% include dir/nested %}
 Include basic again:
 {% include basic %}
 """
@@ -152,6 +167,42 @@ empty line above
 no newline at the end
 Include basic again:
 basic
+"""
+
+TEMPLATE_NESTED_IFS = """\
+{% if yadm.user == "me" %}
+    print1
+  {% if yadm.user == "me" %}
+    print2
+  {% else %}
+    no print1
+  {% endif %}
+{% else %}
+  {% if yadm.user == "me" %}
+    no print2
+  {% else %}
+    no print3
+  {% endif %}
+{% endif %}
+{% if yadm.user != "me" %}
+    no print4
+  {% if yadm.user == "me" %}
+    no print5
+  {% else %}
+    no print6
+  {% endif %}
+{% else %}
+  {% if yadm.user == "me" %}
+    print3
+  {% else %}
+    no print7
+  {% endif %}
+{% endif %}
+"""
+EXPECTED_NESTED_IFS = """\
+    print1
+    print2
+    print3
 """
 
 
@@ -182,7 +233,7 @@ def test_template_default(runner, yadm, tmpdir):
         local_distro_family="{LOCAL_DISTRO_FAMILY}"
         template_default "{input_file}" "{output_file}"
     """
-    run = runner(command=["bash"], inp=script)
+    run = runner(command=["bash"], inp=script, env={"VAR": ENV_VAR})
     assert run.success
     assert run.err == ""
     assert output_file.read() == EXPECTED
@@ -243,12 +294,30 @@ def test_include(runner, yadm, tmpdir):
     assert os.stat(output_file).st_mode == os.stat(input_file).st_mode
 
 
+def test_nested_ifs(runner, yadm, tmpdir):
+    """Test nested if statements"""
+
+    input_file = tmpdir.join("input")
+    input_file.write(TEMPLATE_NESTED_IFS, ensure=True)
+    output_file = tmpdir.join("output")
+
+    script = f"""
+        YADM_TEST=1 source {yadm}
+        set_awk
+        local_user="me"
+        template_default "{input_file}" "{output_file}"
+    """
+    run = runner(command=["bash"], inp=script)
+    assert run.success
+    assert run.err == ""
+    assert output_file.read() == EXPECTED_NESTED_IFS
+
+
 def test_env(runner, yadm, tmpdir):
     """Test env"""
 
     input_file = tmpdir.join("input")
     input_file.write("{{env.PWD}}", ensure=True)
-    input_file.chmod(FILE_MODE)
     output_file = tmpdir.join("output")
 
     script = f"""
