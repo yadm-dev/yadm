@@ -798,7 +798,7 @@
 ## REPORTING BUGS
        Report issues or create pull requests at GitHub:
 
-       https://github.com/TheLocehiliosan/yadm/issues
+       https://github.com/yadm-dev/yadm/issues
 
 
 ## AUTHOR

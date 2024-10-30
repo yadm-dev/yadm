@@ -29,7 +29,7 @@
 #   source <(curl -L bootstrap.yadm.io)
 #
 
-YADM_REPO="https://github.com/TheLocehiliosan/yadm"
+YADM_REPO="https://github.com/yadm-dev/yadm"
 YADM_RELEASE=${release:-master}
 REPO_URL=""
 
