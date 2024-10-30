@@ -1,7 +1,7 @@
 ---
 main:
   - title: '
-<a href="https://github.com/TheLocehiliosan/yadm">
+<a href="https://github.com/yadm-dev/yadm">
 <img
 src="https://img.shields.io/static/v1?label=Star&message=%20&style=social&logo=github"
 alt="Star">
@@ -49,4 +49,4 @@ docs:
       - title: "Example Dotfiles"
         url: /docs/examples
       - title: "Manual"
-        url: "https://github.com/TheLocehiliosan/yadm/blob/master/yadm.md"
+        url: "https://github.com/yadm-dev/yadm/blob/master/yadm.md"

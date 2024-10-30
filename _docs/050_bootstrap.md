@@ -175,7 +175,7 @@ scripts. Each script is placed in `$HOME/.config/yadm/bootstrap.d` and it is
 possible to use the [alternate files](/docs/alternates) system to control which
 systems that a specific bootstrap step is executed on.
 
-[bootstrap.d]: https://raw.githubusercontent.com/TheLocehiliosan/yadm/master/contrib/bootstrap/bootstrap-in-dir
+[bootstrap.d]: https://raw.githubusercontent.com/yadm-dev/yadm/master/contrib/bootstrap/bootstrap-in-dir
 
 ---
 

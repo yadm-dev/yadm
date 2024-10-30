@@ -10,33 +10,19 @@ title_separator: "-"
 name: Tim Byrne
 description: Yet Another Dotfiles Manager
 url: https://yadm.io
-repository: TheLocehiliosan/yadm
-
-# Social Sharing
-twitter:
-  username: TheLocehiliosan
+repository: yadm-dev/yadm
 
 footer:
   links:
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
-      url: https://github.com/TheLocehiliosan
-    - label: "Twitter"
-      icon: "fab fa-fw fa-twitter-square"
-      url: https://twitter.com/TheLocehiliosan
+      url: https://github.com/yadm-dev
     - label: "Privacy Policy"
       icon: "fas fa-fw fa-user-shield"
       url: /privacy
 
 atom_feed: false
 # path: false
-
-# Analytics
-analytics:
-  provider: google-universal
-  google:
-    tracking_id: UA-83783540-1
-gtm: GTM-55MC869
 
 # Site Author
 author:
@@ -46,9 +32,6 @@ author:
     - label: Email
       icon: fas fa-fw fa-envelope-square
       url: mailto:sultan@locehilios.com
-    - label: Twitter
-      icon: fab fa-fw fa-twitter-square
-      url: https://twitter.com/TheLocehiliosan
     - label: GitHub
       icon: fab fa-fw fa-github
       url: https://github.com/TheLocehiliosan

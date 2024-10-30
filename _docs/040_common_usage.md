@@ -14,7 +14,7 @@ and those which are passed directly through to Git are denoted with
 
 <i class="fa fa-fw fa-asterisk" aria-hidden="true"></i> `man yadm`
 : Display yadm's
-[manual](https://github.com/TheLocehiliosan/yadm/blob/master/yadm.md).
+[manual](https://github.com/yadm-dev/yadm/blob/master/yadm.md).
 
 <i class="fab fa-fw fa-git-square" aria-hidden="true"></i> `yadm status`
 : Show the repository status; added, changed, removed files. Because a `$HOME`

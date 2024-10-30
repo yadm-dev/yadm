@@ -92,7 +92,7 @@ and then install yadm via the download or clone instructions below.
 You *can* simply download the yadm script and put it into your `$PATH`. Something like this:
 
 ```
-curl -fLo /usr/local/bin/yadm https://github.com/TheLocehiliosan/yadm/raw/master/yadm && chmod a+x /usr/local/bin/yadm
+curl -fLo /usr/local/bin/yadm https://github.com/yadm-dev/yadm/raw/master/yadm && chmod a+x /usr/local/bin/yadm
 ```
 
 Of course, you can change the file paths above to be appropriate for your `$PATH` and situation.
@@ -103,7 +103,7 @@ You might wish to clone the yadm project and symlink `yadm` into your
 `$PATH`.
 
 ```
-git clone https://github.com/TheLocehiliosan/yadm.git ~/.yadm-project
+git clone https://github.com/yadm-dev/yadm.git ~/.yadm-project
 ln -s ~/.yadm-project/yadm ~/bin/yadm
 ```
 
@@ -117,7 +117,7 @@ the yadm project as a submodule and symlink `yadm` into your `$PATH`.
 
 ```
 cd ~
-yadm submodule add https://github.com/TheLocehiliosan/yadm.git .yadm-project
+yadm submodule add https://github.com/yadm-dev/yadm.git .yadm-project
 yadm submodule update --init --recursive
 ln -s ~/.yadm-project/yadm ~/bin/yadm
 yadm add .yadm-project .gitmodules bin/yadm

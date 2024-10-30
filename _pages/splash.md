@@ -3,7 +3,7 @@ layout: splash
 permalink: /
 stars_button: '
 {::nomarkdown}<iframe
-src="https://ghbtns.com/github-btn.html?user=TheLocehiliosan&repo=yadm&type=star&count=true"
+src="https://ghbtns.com/github-btn.html?user=yadm-dev&repo=yadm&type=star&count=true"
 frameborder="0" scrolling="0" width="100"
 height="20px" style="float: right;"></iframe>{:/nomarkdown}
 '
@@ -110,7 +110,7 @@ feature_row:
     btn_class: btn--inverse
     btn_label: See man page
     image_path: /images/book-padding.png
-    url: https://github.com/TheLocehiliosan/yadm/blob/master/yadm.md
+    url: https://github.com/yadm-dev/yadm/blob/master/yadm.md
     excerpt: '
 
         View the manual online.
@@ -132,7 +132,7 @@ feature_row:
     btn_class: btn--inverse
     btn_label: Read guidlines
     image_path: /images/hands-padding.png
-    url: https://github.com/TheLocehiliosan/yadm/blob/master/.github/CONTRIBUTING.md
+    url: https://github.com/yadm-dev/yadm/blob/master/.github/CONTRIBUTING.md
     excerpt: '
 
         Improve yadm by reporting bugs, coding changes, documentation and
@@ -146,5 +146,5 @@ feature_row:
 {% include feature_row %}
 
 If you enjoy using yadm, consider
-[adding a star to the repository](https://github.com/TheLocehiliosan/yadm)
+[adding a star to the repository](https://github.com/yadm-dev/yadm)
 on GitHub. The star count helps others discover yadm.
