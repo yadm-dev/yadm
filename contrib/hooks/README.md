@@ -11,4 +11,4 @@ this is a place to share it.
 I recommend *careful review* of any code from here before using it. No
 guarantees of code quality is assumed.
 
-[hooks-help]: https://github.com/TheLocehiliosan/yadm/blob/master/yadm.md#hooks
+[hooks-help]: https://github.com/yadm-dev/yadm/blob/master/yadm.md#hooks

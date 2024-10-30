@@ -57,8 +57,8 @@ RUN mkdir /yadm \
   && echo "\t@false" >> /yadm/Makefile
 
 # Include released versions of yadm to test upgrades
-ADD https://raw.githubusercontent.com/TheLocehiliosan/yadm/1.12.0/yadm /usr/local/bin/yadm-1.12.0
-ADD https://raw.githubusercontent.com/TheLocehiliosan/yadm/2.5.0/yadm /usr/local/bin/yadm-2.5.0
+ADD https://raw.githubusercontent.com/yadm-dev/yadm/1.12.0/yadm /usr/local/bin/yadm-1.12.0
+ADD https://raw.githubusercontent.com/yadm-dev/yadm/2.5.0/yadm /usr/local/bin/yadm-2.5.0
 RUN chmod +x /usr/local/bin/yadm-*
 
 # Configure git to make it easier to test yadm manually
