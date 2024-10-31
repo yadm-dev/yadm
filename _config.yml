@@ -17,9 +17,6 @@ footer:
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: https://github.com/yadm-dev
-    - label: "Privacy Policy"
-      icon: "fas fa-fw fa-user-shield"
-      url: /privacy
 
 atom_feed: false
 # path: false
