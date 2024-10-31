@@ -2,7 +2,7 @@
 version: '3'
 services:
   website:
-    image: yadm/jekyll:2019-10-17
+    image: yadm/jekyll:2024-10-31
     ports:
       - 4000:4000
     volumes:
