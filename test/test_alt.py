@@ -56,9 +56,13 @@ def test_alt_source(runner, paths, tracked, encrypt, exclude, yadm_alt):
 
 @pytest.mark.usefixtures("ds1_copy")
 @pytest.mark.parametrize("yadm_alt", [True, False], ids=["alt", "worktree"])
-def test_relative_link(runner, paths, yadm_alt):
+@pytest.mark.parametrize("rel_worktree", [True, False], ids=["relative_work", "absolute_work"])
+def test_relative_link(runner, paths, yadm_alt, yadm_cmd, rel_worktree):
     """Confirm links created are relative"""
     yadm_dir, yadm_data = setup_standard_yadm_dir(paths)
+
+    if rel_worktree:
+        runner(yadm_cmd("gitconfig", "core.worktree", "../../../.."))
 
     utils.create_alt_files(
         paths, "##default", tracked=True, encrypt=False, exclude=False, yadm_alt=yadm_alt, yadm_dir=yadm_dir
