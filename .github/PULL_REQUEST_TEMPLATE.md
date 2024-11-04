@@ -29,6 +29,6 @@ Be sure to preface the issue/PR numbers with a "#".
 
 Please review [yadm's Contributing Guide][3] for best practices.
 
-[1]: https://github.com/TheLocehiliosan/yadm/blob/master/.github/CONTRIBUTING.md#test-conventions
+[1]: https://github.com/yadm-dev/yadm/blob/master/.github/CONTRIBUTING.md#test-conventions
 [2]: https://help.github.com/en/articles/signing-commits
-[3]: https://github.com/TheLocehiliosan/yadm/blob/master/.github/CONTRIBUTING.md
+[3]: https://github.com/yadm-dev/yadm/blob/master/.github/CONTRIBUTING.md
