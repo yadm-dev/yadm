@@ -1,4 +1,4 @@
-black==23.1.0
+black==24.3.0
 envtpl
 flake8==6.0.0
 isort==5.12.0
