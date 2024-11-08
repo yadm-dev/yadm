@@ -369,6 +369,10 @@ function template_default() {
   # all versions of awk seem to support the POSIX character classes [[:blank:]]
   read -r -d '' awk_pgm << "EOF"
 BEGIN {
+  classes = ARGV[2]
+  for (i = 3; i < ARGC; ++i) {
+    classes = classes "\n" ARGV[i]
+  }
   yadm["class"] = class
   yadm["classes"] = classes
   yadm["arch"] = arch
@@ -485,9 +489,8 @@ EOF
     -v distro_family="$local_distro_family" \
     -v source="$input" \
     -v source_dir="$(dirname "$input")" \
-    -v classes="$(join_string $'\n' "${local_classes[@]}")" \
     "$awk_pgm" \
-    "$input" > "$temp_file" || rm -f "$temp_file"
+    "$input" "${local_classes[@]}" > "$temp_file" || rm -f "$temp_file"
 
   move_file "$input" "$output" "$temp_file"
 }
