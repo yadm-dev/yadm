@@ -1,6 +1,6 @@
 #!/bin/sh
 # yadm - Yet Another Dotfiles Manager
-# Copyright (C) 2015-2022 Tim Byrne
+# Copyright (C) 2015-2024 Tim Byrne
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ if [ -z "$BASH_VERSION" ]; then
   [ "$YADM_TEST" != 1 ] && exec bash "$0" "$@"
 fi
 
-VERSION=3.2.1
+VERSION=3.3.0
 
 YADM_WORK="$HOME"
 YADM_DIR=
@@ -204,14 +204,14 @@ function score_file() {
         return
       fi
     elif [[ "$label" =~ ^(d|distro)$ ]]; then
-      if [ "$value" = "$local_distro" ]; then
+      if [ "${value/\ /_}" = "${local_distro/\ /_}" ]; then
         score=$((score + 4))
       else
         score=0
         return
       fi
     elif [[ "$label" =~ ^(f|distro_family)$ ]]; then
-      if [ "$value" = "$local_distro_family" ]; then
+      if [ "${value/\ /_}" = "${local_distro_family/\ /_}" ]; then
         score=$((score + 8))
       else
         score=0
@@ -289,18 +289,18 @@ function record_score() {
         # increase the index of any existing alt_template_cmds
         new_cmds=()
         for cmd_index in "${!alt_template_cmds[@]}"; do
-            new_cmds[$((cmd_index+1))]="${alt_template_cmds[$cmd_index]}"
+            new_cmds[cmd_index+1]="${alt_template_cmds[$cmd_index]}"
         done
         alt_template_cmds=()
         for cmd_index in "${!new_cmds[@]}"; do
-            alt_template_cmds[$cmd_index]="${new_cmds[$cmd_index]}"
+            alt_template_cmds[cmd_index]="${new_cmds[$cmd_index]}"
         done
     else
         alt_targets+=("$tgt")
         # set index to the last index (newly created one)
         for index in "${!alt_targets[@]}"; do :; done
         # and set its initial score to zero
-        alt_scores[$index]=0
+        alt_scores[index]=0
      fi
   fi
 
@@ -309,8 +309,8 @@ function record_score() {
 
   # record higher scoring sources
   if [ "$score" -gt "${alt_scores[$index]}" ]; then
-    alt_scores[$index]="$score"
-    alt_sources[$index]="$src"
+    alt_scores[index]="$score"
+    alt_sources[index]="$src"
   fi
 
 }
@@ -336,8 +336,8 @@ function record_template() {
   fi
 
   # record the template command, last one wins
-  alt_template_cmds[$index]="$cmd"
-  alt_sources[$index]="$src"
+  alt_template_cmds[index]="$cmd"
+  alt_sources[index]="$src"
 
 }
 
@@ -368,93 +368,119 @@ function template_default() {
   # the explicit "space + tab" character class used below is used because not
   # all versions of awk seem to support the POSIX character classes [[:blank:]]
   read -r -d '' awk_pgm << "EOF"
-# built-in default template processor
 BEGIN {
-  blank              = "[ 	]"
-  c["class"]         = class
-  c["classes"]       = classes
-  c["arch"]          = arch
-  c["os"]            = os
-  c["hostname"]      = host
-  c["user"]          = user
-  c["distro"]        = distro
-  c["distro_family"] = distro_family
-  c["source"]        = source
-  ifs                = "^{%" blank "*if"
-  els                = "^{%" blank "*else" blank "*%}$"
-  end                = "^{%" blank "*endif" blank "*%}$"
-  skp                = "^{%" blank "*(if|else|endif)"
-  vld                = conditions()
-  inc_start          = "^{%" blank "*include" blank "+\"?"
-  inc_end            = "\"?" blank "*%}$"
-  inc                = inc_start ".+" inc_end
-  prt                = 1
-  err                = 0
-}
-END { exit err }
-{ replace_vars() } # variable replacements
-$0 ~ vld, $0 ~ end {
-  if ($0 ~ vld || $0 ~ end) prt=1;
-  if ($0 ~ els) prt=0;
-  if ($0 ~ skp) next;
-}
-($0 ~ ifs && $0 !~ vld), $0 ~ end {
-  if ($0 ~ ifs && $0 !~ vld) prt=0;
-  if ($0 ~ els || $0 ~ end) prt=1;
-  if ($0 ~ skp) next;
-}
-{ if (!prt) next }
-$0 ~ inc {
-  file = $0
-  sub(inc_start, "", file)
-  sub(inc_end, "", file)
-  sub(/^[^\/].*$/, source_dir "/&", file)
+  classes = ARGV[2]
+  for (i = 3; i < ARGC; ++i) {
+    classes = classes "\n" ARGV[i]
+  }
+  yadm["class"] = class
+  yadm["classes"] = classes
+  yadm["arch"] = arch
+  yadm["os"] = os
+  yadm["hostname"] = host
+  yadm["user"] = user
+  yadm["distro"] = distro
+  yadm["distro_family"] = distro_family
+  yadm["source"] = source
 
-  while ((res = getline <file) > 0) {
-    replace_vars()
-    print
+  VARIABLE = "(env|yadm)\\.[a-zA-Z0-9_]+"
+
+  current = 0
+  filename[current] = ARGV[1]
+  line[current] = 0
+
+  level = 0
+  skip[level] = 0
+
+  for (; current >= 0; --current) {
+    while ((res = getline <filename[current]) > 0) {
+      ++line[current]
+      if ($0 ~ "^[ \t]*\\{%[ \t]*if[ \t]+" VARIABLE "[ \t]*[!=]=[ \t]*\".*\"[ \t]*%\\}$") {
+        if (skip[level]) { skip[++level] = 1; continue }
+
+        match($0, VARIABLE)
+        lhs = substr($0, RSTART, RLENGTH)
+        match($0, /[!=]=/)
+        op = substr($0, RSTART, RLENGTH)
+        match($0, /".*"/)
+        rhs = replace_vars(substr($0, RSTART + 1, RLENGTH - 2))
+
+        if (lhs == "yadm.class") {
+          lhs = "not" rhs
+          split(classes, cls_array, "\n")
+          for (idx in cls_array) {
+            if (rhs == cls_array[idx]) { lhs = rhs; break }
+          }
+        }
+        else {
+          lhs = replace_vars("{{" lhs "}}")
+        }
+
+        if (op == "==") { skip[++level] = lhs != rhs }
+        else { skip[++level] = lhs == rhs }
+      }
+      else if (/^[ \t]*\{%[ \t]*else[ \t]*%\}$/) {
+        if (level == 0 || skip[level] < 0) { error("else without matching if") }
+        skip[level] = skip[level] ? skip[level - 1] : -1
+      }
+      else if (/^[ \t]*\{%[ \t]*endif[ \t]*%\}$/) {
+        if (--level < 0) { error("endif without matching if") }
+      }
+      else if (!skip[level]) {
+        $0 = replace_vars($0)
+        if (match($0, /^[ \t]*\{%[ \t]*include[ \t]+("[^"]+"|[^"]+)[ \t]*%\}$/)) {
+          include = $0
+          sub(/^[ \t]*\{%[ \t]*include[ \t]+"?/, "", include)
+          sub(/"?[ \t]*%\}$/, "", include)
+          if (index(include, "/") != 1) {
+            include = source_dir "/" include
+          }
+          filename[++current] = include
+          line[current] = 0
+        }
+        else { print }
+      }
+    }
+    if (res >= 0) { close(filename[current]) }
+    else if (current == 0) { error("could not read input file") }
+    else { --current; error("could not read include file '" filename[current + 1] "'") }
   }
-  if (res < 0) {
-    printf "%s:%d: error: could not read '%s'\n", FILENAME, NR, file | "cat 1>&2"
-    err = 1
+  if (level > 0) {
+    current = 0
+    error("unterminated if")
   }
-  close(file)
-  next
+  exit 0
 }
-{ print }
-function replace_vars() {
-  for (label in c) {
-    gsub(("{{" blank "*yadm\\." label blank "*}}"), c[label])
-  }
-  for (label in ENVIRON) {
-    gsub(("{{" blank "*env\\." label blank "*}}"), ENVIRON[label])
-  }
+function error(text) {
+  printf "%s:%d: error: %s\n",
+    filename[current], line[current], text > "/dev/stderr"
+  exit 1
 }
-function condition_helper(label, value) {
-  gsub(/[\\.^$(){}\[\]|*+?]/, "\\\\&", value)
-  return sprintf("yadm\\.%s" blank "*==" blank "*\"%s\"", label, value)
-}
-function conditions() {
-  pattern = ifs blank "+("
-  for (label in c) {
-    if (label != "class") {
-      value = c[label]
-      pattern = sprintf("%s%s|", pattern, condition_helper(label, value));
+function replace_vars(input) {
+  output = ""
+  while (match(input, "\\{\\{[ \t]*" VARIABLE "[ \t]*\\}\\}")) {
+    if (RSTART > 1) {
+      output = output substr(input, 0, RSTART - 1)
+    }
+    data = substr(input, RSTART + 2, RLENGTH - 4)
+    input = substr(input, RSTART + RLENGTH)
+
+    gsub(/[ \t]+/, "", data)
+    split(data, fields, /\./)
+
+    if (fields[1] == "env") {
+      output = output ENVIRON[fields[2]]
+    }
+    else {
+      output = output yadm[fields[2]]
     }
   }
-  split(classes, cls_array, "\n")
-  for (idx in cls_array) {
-    value = cls_array[idx]
-    pattern = sprintf("%s%s|", pattern, condition_helper("class", value));
-  }
-  sub(/\|$/, ")" blank "*%}$", pattern)
-  return pattern
+  return output input
 }
 EOF
 
-  local source_dir yadm_classes content
+  local source_dir content
   source_dir=$(dirname "$input")
-  yadm_classes=$(join_string $'\n' "${local_classes[@]}")
   content=$("${AWK_PROGRAM[0]}" \
     -v class="$local_class" \
     -v arch="$local_arch" \
@@ -465,9 +491,8 @@ EOF
     -v distro_family="$local_distro_family" \
     -v source="$input" \
     -v source_dir="$source_dir" \
-    -v classes="$yadm_classes" \
     "$awk_pgm" \
-    "$input")
+    "$input" "${local_classes[@]}")
 
   move_file "$input" "$output" "$content"
 }

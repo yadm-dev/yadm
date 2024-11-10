@@ -8,7 +8,7 @@ assignees: ''
 ---
 <!--
 Before submitting, please search open and closed issues at
-https://github.com/TheLocehiliosan/yadm/issues to avoid duplication.
+https://github.com/yadm-dev/yadm/issues to avoid duplication.
 
 If you have found a security vulnerability, do NOT open an issue.
 Email yadm@yadm.io instead.
@@ -25,10 +25,10 @@ Can this be reproduced with the yadm/testbed docker image: [Yes/No]
 Consider trying to reproduce the bug inside a docker container using the
 yadm/testbed docker image. https://hub.docker.com/r/yadm/testbed
 
-The easiest way to start this container, is to clone the TheLocehiliosan/yadm
+The easiest way to start this container, is to clone the yadm-dev/yadm
 repo, and use the "scripthost" make target. For example:
 
-  $ git clone https://github.com/TheLocehiliosan/yadm.git
+  $ git clone https://github.com/yadm-dev/yadm.git
   $ cd yadm
   $ make scripthost version=1.11.0
   Starting scripthost version="1.11.0" (recording script)

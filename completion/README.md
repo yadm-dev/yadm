@@ -39,7 +39,7 @@ Load `_yadm` as a plugin in your `.zshrc`:
 
 ```zsh
 fpath=("$ZPLUG_HOME/bin" $fpath)
-zplug "TheLocehiliosan/yadm", use:"completion/zsh/_yadm", as:command, defer:2
+zplug "yadm-dev/yadm", use:"completion/zsh/_yadm", as:command, defer:2
 ```
 
 ## Fish (manual installation)

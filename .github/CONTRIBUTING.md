@@ -1,7 +1,7 @@
 # Introduction
 
-Thank you for considering contributing to **yadm**. I develop this project in my
-limited spare time, so help is very appreciated.
+Thank you for considering contributing to **yadm**. We develop this project in
+our limited spare time, so help is very appreciated.
 
 All contributors must follow our [Code of Conduct][conduct]. Please make sure
 you are welcoming and friendly during your interactions, and report any
@@ -17,7 +17,8 @@ To contribute, you can:
 * Star the yadm repo, the star count helps others discover yadm.
 * Report [bugs](#reporting-a-bug)
 * Request [features/enhancements](#suggesting-a-feature-or-enhancement)
-* Contribute changes to [code, tests](#contributing-code), and [documentation](#improving-documentation)
+* Contribute changes to [code, tests](#contributing-code), and
+  [documentation](#improving-documentation)
 * Maintain installation [packages](#maintaining-packages)
 * Help other users by [answering support questions](#answering-support-questions)
 
@@ -70,14 +71,14 @@ Consider trying to reproduce the bug inside a docker container using the
 [yadm/testbed][] docker image. Doing so will greatly increase the likelihood of
 the problem being fixed.
 
-The easiest way to start this container, is to clone the [TheLocehiliosan/yadm
+The easiest way to start this container, is to clone the [yadm
 repo][yadm-repo], and use the `scripthost` make target. _(You will need `make`
 and `docker` installed.)_
 
 For example:
 
 ```text
-$ git clone https://github.com/TheLocehiliosan/yadm.git
+$ git clone https://github.com/yadm-dev/yadm.git
 $ cd yadm
 $ make scripthost version=1.12.0
 Starting scripthost version="1.12.0" (recording script)
@@ -203,7 +204,7 @@ these principles when making changes.
 3. Add the official repository (`upstream`) as a remote repository.
 
     ```text
-    $ git remote add upstream https://github.com/TheLocehiliosan/yadm.git
+    $ git remote add upstream https://github.com/yadm-dev/yadm.git
     ```
 
 4. Verify you can run the test harness. _(This will require dependencies:
@@ -211,6 +212,11 @@ these principles when making changes.
 
     ```text
     $ make test
+    ```
+    If you don't use `docker` but an OCI engine akin to `podman`, you can set it through the `OCI` switch for every target
+
+    ```text
+    $ make test OCI=podman
     ```
 
 5. Create a feature branch, based off the `develop` branch.
@@ -356,25 +362,24 @@ see if you can help.
 [attach-help]: https://help.github.com/en/articles/file-attachments-on-issues-and-pull-requests
 [commit-style]: https://chris.beams.io/posts/git-commit/#seven-rules
 [conduct]: CODE_OF_CONDUCT.md
-[contrib-hooks]: https://github.com/TheLocehiliosan/yadm/tree/master/contrib/hooks
+[contrib-hooks]: https://github.com/yadm-dev/yadm/tree/master/contrib/hooks
 [flake8]: https://pypi.org/project/flake8/
 [groff-man]: https://www.gnu.org/software/groff/manual/html_node/man.html
-[hooks-help]: https://github.com/TheLocehiliosan/yadm/blob/master/yadm.md#hooks
+[hooks-help]: https://github.com/yadm-dev/yadm/blob/master/yadm.md#hooks
 [html-proofer]: https://github.com/gjtorikian/html-proofer
 [jekyll]: https://jekyllrb.com
-[new-bug]: https://github.com/TheLocehiliosan/yadm/issues/new?template=BUG_REPORT.md
-[new-feature]: https://github.com/TheLocehiliosan/yadm/issues/new?template=FEATURE_REQUEST.md
-[open-issues]: https://github.com/TheLocehiliosan/yadm/issues
+[new-bug]: https://github.com/yadm-dev/yadm/issues/new?template=BUG_REPORT.md
+[new-feature]: https://github.com/yadm-dev/yadm/issues/new?template=FEATURE_REQUEST.md
+[open-issues]: https://github.com/yadm-dev/yadm/issues
 [pr-help]: https://help.github.com/en/articles/creating-a-pull-request-from-a-fork
 [pylint]: https://pylint.org/
 [pytest]: https://pytest.org/
-[questions]: https://github.com/TheLocehiliosan/yadm/labels/question
-[refactor]: https://github.com/TheLocehiliosan/yadm/issues/146
+[questions]: https://github.com/yadm-dev/yadm/labels/question
 [shellcheck]: https://www.shellcheck.net
 [signing-commits]: https://help.github.com/en/articles/signing-commits
 [tpope-style]: https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
-[yadm-man]: https://github.com/TheLocehiliosan/yadm/blob/master/yadm.md
-[yadm-repo]: https://github.com/TheLocehiliosan/yadm
+[yadm-man]: https://github.com/yadm-dev/yadm/blob/master/yadm.md
+[yadm-repo]: https://github.com/yadm-dev/yadm
 [yadm/jekyll]: https://hub.docker.com/r/yadm/jekyll
 [yadm/testbed]: https://hub.docker.com/r/yadm/testbed
 [yamllint]: https://github.com/adrienverge/yamllint

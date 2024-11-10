@@ -8,7 +8,7 @@ assignees: ''
 ---
 <!--
 Before submitting, please search open and closed issues at
-https://github.com/TheLocehiliosan/yadm/issues to avoid duplication.
+https://github.com/yadm-dev/yadm/issues to avoid duplication.
 -->
 
 ### Is your feature request related to a problem? Please describe.
