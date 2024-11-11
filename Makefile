@@ -1,5 +1,5 @@
 PYTESTS = $(wildcard test/test_*.py)
-IMAGE = docker.io/yadm/testbed:2023-07-12
+IMAGE = docker.io/yadm/testbed:2024-11-11
 OCI = docker
 
 .PHONY: all

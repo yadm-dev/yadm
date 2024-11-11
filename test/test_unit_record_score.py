@@ -1,4 +1,5 @@
 """Unit tests: record_score"""
+
 import pytest
 
 INIT_VARS = """

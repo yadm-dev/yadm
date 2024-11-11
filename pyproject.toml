@@ -7,6 +7,7 @@ markers = [
 
 [tool.pylint.design]
 max-args = 14
+max-positional-arguments = 10
 max-locals = 28
 max-attributes = 8
 max-statements = 65

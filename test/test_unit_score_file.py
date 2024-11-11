@@ -1,4 +1,5 @@
 """Unit tests: score_file"""
+
 import pytest
 
 CONDITION = {

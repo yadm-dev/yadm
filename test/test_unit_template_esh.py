@@ -1,4 +1,5 @@
 """Unit tests: template_esh"""
+
 import os
 
 FILE_MODE = 0o754

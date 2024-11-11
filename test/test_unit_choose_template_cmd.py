@@ -1,4 +1,5 @@
 """Unit tests: choose_template_cmd"""
+
 import pytest
 
 
@@ -19,7 +20,7 @@ def test_kind_default(runner, yadm, awk, label):
 
     script = f"""
         YADM_TEST=1 source {yadm}
-        function awk_available {{ { awk_avail}; }}
+        function awk_available {{ {awk_avail}; }}
         template="$(choose_template_cmd "{label}")"
         echo "TEMPLATE:$template"
     """
@@ -50,8 +51,8 @@ def test_kind_j2cli_envtpl(runner, yadm, envtpl, j2cli, label):
 
     script = f"""
         YADM_TEST=1 source {yadm}
-        function envtpl_available {{ { envtpl_avail}; }}
-        function j2cli_available {{ { j2cli_avail}; }}
+        function envtpl_available {{ {envtpl_avail}; }}
+        function j2cli_available {{ {j2cli_avail}; }}
         template="$(choose_template_cmd "{label}")"
         echo "TEMPLATE:$template"
     """

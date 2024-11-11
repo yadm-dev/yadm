@@ -1,4 +1,5 @@
 """Unit tests: upgrade"""
+
 import pytest
 
 
@@ -62,11 +63,10 @@ def test_upgrade(tmpdir, runner, yadm, condition):
             function git() {{
                 echo "$@"
                 if [[ "$*" = *"submodule status" ]]; then
-                    { 'echo " 1234567 mymodule (1.0)"'
-                        if condition == 'submodules' else ':' }
+                    {'echo " 1234567 mymodule (1.0)"' if condition == 'submodules' else ':'}
                 fi
                 if [[ "$*" = *ls-files* ]]; then
-                    return { 1 if condition == 'untracked' else 0 }
+                    return {1 if condition == 'untracked' else 0}
                 fi
                 return 0
             }}

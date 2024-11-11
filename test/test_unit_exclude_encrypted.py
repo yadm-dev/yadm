@@ -1,4 +1,5 @@
 """Unit tests: exclude_encrypted"""
+
 import pytest
 
 

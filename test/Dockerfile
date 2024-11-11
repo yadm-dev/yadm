@@ -1,8 +1,7 @@
-FROM ubuntu:23.04
-MAINTAINER Tim Byrne <sultan@locehilios.com>
+FROM ubuntu:24.10
 
 # Shellcheck and esh versions
-ARG SC_VER=0.9.0
+ARG SC_VER=0.10.0
 ARG ESH_VER=0.3.2
 
 # Install prerequisites and configure UTF-8 locale
@@ -14,6 +13,7 @@ RUN \
     expect \
     git \
     gnupg \
+    j2cli \
     locales \
     lsb-release \
     make \
@@ -39,10 +39,9 @@ RUN cd /opt \
   && rm -f shellcheck-v$SC_VER.linux.x86_64.tar.xz \
   && ln -s /opt/shellcheck-v$SC_VER/shellcheck /usr/local/bin
 
-# Upgrade pip3 and install requirements
+# Install requirements
 COPY test/requirements.txt /tmp/requirements.txt
-RUN python3 -m pip install --break-system-packages --upgrade pip setuptools \
-  && python3 -m pip install --break-system-packages --upgrade -r /tmp/requirements.txt \
+RUN python3 -m pip install --break-system-packages -r /tmp/requirements.txt \
   && rm -f /tmp/requirements
 
 # Install esh

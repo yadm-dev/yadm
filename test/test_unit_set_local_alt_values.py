@@ -1,4 +1,5 @@
 """Unit tests: set_local_alt_values"""
+
 import pytest
 import utils
 
