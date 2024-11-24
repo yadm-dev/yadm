@@ -1906,65 +1906,35 @@ function parse_encrypt() {
   fi
 
   ENCRYPT_INCLUDE_FILES=()
-  ENCRYPT_EXCLUDE_FILES=()
-  FINAL_INCLUDE=()
 
   [ -f "$YADM_ENCRYPT" ] || return
 
   cd_work "Parsing encrypt" || return
 
-  # setting globstar to allow ** in encrypt patterns
-  # (only supported on Bash >= 4)
-  local unset_globstar
-  if ! shopt globstar &> /dev/null; then
-    unset_globstar=1
-  fi
-  shopt -s globstar &> /dev/null
+  local -a exclude
+  local -a include
 
-  exclude_pattern="^!(.+)"
-  # parse both included/excluded
-  while IFS='' read -r line || [ -n "$line" ]; do
-    if [[ ! $line =~ ^# && ! $line =~ ^[[:blank:]]*$ ]] ; then
-      local IFS=$'\n'
-      for pattern in $line; do
-        if [[ "$pattern" =~ $exclude_pattern ]]; then
-          for ex_file in ${BASH_REMATCH[1]}; do
-            if [ -e "$ex_file" ]; then
-              ENCRYPT_EXCLUDE_FILES+=("$ex_file")
-            fi
-          done
-        else
-          for in_file in $pattern; do
-            if [ -e "$in_file" ]; then
-              ENCRYPT_INCLUDE_FILES+=("$in_file")
-            fi
-          done
+  while IFS= read -r pattern; do
+    case $pattern in
+      \#*)
+        # Ignore comments
+        ;;
+      !*)
+        exclude+=("--exclude=${pattern:1}")
+        ;;
+      *)
+        if ! [[ $pattern =~ ^[[:blank:]]*$ ]]; then
+          include+=("$pattern")
         fi
-      done
-    fi
+        ;;
+    esac
   done < "$YADM_ENCRYPT"
 
-  # remove excludes from the includes
-  #(SC2068 is disabled because in this case, we desire globbing)
-  #shellcheck disable=SC2068
-  for included in "${ENCRYPT_INCLUDE_FILES[@]}"; do
-    skip=
-    #shellcheck disable=SC2068
-    for ex_file in ${ENCRYPT_EXCLUDE_FILES[@]}; do
-      [ "$included" == "$ex_file" ] && { skip=1; break; }
-    done
-    [ -n "$skip" ] || FINAL_INCLUDE+=("$included")
-  done
-
-  # sort the encrypted files
-  #shellcheck disable=SC2207
-  IFS=$'\n' ENCRYPT_INCLUDE_FILES=($(LC_ALL=C sort <<<"${FINAL_INCLUDE[*]}"))
-  unset IFS
-
-  if [ "$unset_globstar" = "1" ]; then
-    shopt -u globstar &> /dev/null
+  if [[ ${#include} -gt 0 ]]; then
+      while IFS= read -r filename; do
+          ENCRYPT_INCLUDE_FILES+=("${filename%/}")
+      done <<< "$("$GIT_PROGRAM" ls-files --others "${exclude[@]}" -- "${include[@]}")"
   fi
-
 }
 
 function builtin_dirname() {

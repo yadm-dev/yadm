@@ -105,7 +105,8 @@ def create_test_encrypt_data(paths):
     edata += "dirwild*\n"
     paths.work.join("dirwildcard/file1").write("", ensure=True)
     paths.work.join("dirwildcard/file2").write("", ensure=True)
-    expected.add("dirwildcard")
+    expected.add("dirwildcard/file1")
+    expected.add("dirwildcard/file2")
 
     # excludes
     edata += "exclude*\n"
@@ -186,9 +187,7 @@ def run_parse_encrypt(runner, paths, skip_parse=False, twice=False):
         YADM_WORK={paths.work}
         export YADM_WORK
         {parse_cmd}
-        export ENCRYPT_INCLUDE_FILES
-        export PARSE_ENCRYPT_SHORT
-        env
+        echo PARSE_ENCRYPT_SHORT=$PARSE_ENCRYPT_SHORT
         echo EIF_COUNT:${{#ENCRYPT_INCLUDE_FILES[@]}}
         for value in "${{ENCRYPT_INCLUDE_FILES[@]}}"; do
             echo "EIF:$value"

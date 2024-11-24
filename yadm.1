@@ -765,7 +765,8 @@ gpg is used by default, but openssl can be configured with the
 .I yadm.cipher
 configuration.
 
-To use this feature, a list of patterns must be created and saved as
+To use this feature, a list of patterns (one per line) must be created and
+saved as
 .IR $HOME/.config/yadm/encrypt .
 This list of patterns should be relative to the configured
 .IR work-tree \ (usually\  $HOME ).
@@ -776,11 +777,10 @@ For example:
     .gnupg/*.gpg
 .RE
 
-Standard filename expansions (*, ?, [) are supported.
-If you have Bash version 4, you may use "**" to match all subdirectories.
-Other shell expansions like brace and tilde are not supported.
-Spaces in paths are supported, and should not be quoted.
-If a directory is specified, its contents will be included, but not recursively.
+Standard filename expansions (*, ?, [) are supported. Two consecutive asterisks
+"**" can be used to match all subdirectories.  Other shell expansions like
+brace and tilde are not supported.  Spaces in paths are supported, and should
+not be quoted.  If a directory is specified, its contents will be included.
 Paths beginning with a "!" will be excluded.
 
 The
