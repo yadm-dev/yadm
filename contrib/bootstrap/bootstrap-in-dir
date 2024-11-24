@@ -14,11 +14,16 @@ if [[ ! -d "$BOOTSTRAP_D" ]]; then
     exit 1
 fi
 
-find -L "$BOOTSTRAP_D" -type f | sort | while IFS= read -r bootstrap; do
-    if [[ -x "$bootstrap" && ! "$bootstrap" =~ "##" && ! "$bootstrap" =~ "~$" ]]; then
-        if ! "$bootstrap"; then
-            echo "Error: bootstrap '$bootstrap' failed" >&2
-            exit 1
-        fi
+declare -a bootstraps
+while IFS= read -r bootstrap; do
+    if [[ -x "$bootstrap" && ! "$bootstrap" =~ "##" && ! "$bootstrap" =~ ~$ ]]; then
+        bootstraps+=("$bootstrap")
+    fi
+done < <(find -L "$BOOTSTRAP_D" -type f | sort)
+
+for bootstrap in "${bootstraps[@]}"; do
+    if ! "$bootstrap"; then
+        echo "Error: bootstrap '$bootstrap' failed" >&2
+        exit 1
     fi
 done
