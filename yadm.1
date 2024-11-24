@@ -1,5 +1,5 @@
 .\" vim: set spell so=8:
-.TH yadm 1 "8 November 2024" "3.3.0"
+.TH YADM 1 "November 8, 2024" "3.3.0"
 
 .SH NAME
 
@@ -15,55 +15,55 @@ yadm \- Yet Another Dotfiles Manager
 .I git-command-or-alias
 .RI [ options ]
 
-.B yadm
-init
-.RB [ -f ]
-.RB [ -w
+.B yadm init
+.RB [ \-f ]
+.RB [ \-w
 .IR dir ]
 
-.B yadm
-.RI clone " url
-.RB [ -f ]
-.RB [ -w
+.B yadm clone
+.I url
+.RB [ \-f ]
+.RB [ \-w
 .IR dir ]
-.RB [ -b
+.RB [ \-b
 .IR branch ]
-.RB [ --bootstrap ]
-.RB [ --no-bootstrap ]
+.RB [ \-\-bootstrap ]
+.RB [ \-\-no\-bootstrap ]
 
-.B yadm
-.RI config " name
+.B yadm config
+.I name
 .RI [ value ]
 
-.B yadm
-config
-.RB [ -e ]
+.B yadm config
+.RB [ \-e ]
 
-.B yadm
-list
-.RB [ -a ]
+.B yadm list
+.RB [ \-a ]
 
-.BR yadm " bootstrap
+.B yadm bootstrap
 
-.BR yadm " encrypt
+.B yadm encrypt
 
-.BR yadm " decrypt
-.RB [ -l ]
+.B yadm decrypt
+.RB [ \-l ]
 
-.BR yadm " alt
+.B yadm alt
 
-.BR yadm " perms
+.B yadm perms
 
-.BR yadm " enter [ command ]
+.B yadm enter
+.RI [ command ]
 
-.BR yadm " git-crypt [ options ]
+.B yadm git\-crypt
+.RI [ options ]
 
-.BR yadm " transcrypt [ options ]
+.B yadm transcrypt
+.RI [ options ]
 
-.BR yadm " upgrade
-.RB [ -f ]
+.B yadm upgrade
+.RB [ \-f ]
 
-.BR yadm " introspect
+.B yadm introspect
 .I category
 
 .SH DESCRIPTION
@@ -83,8 +83,7 @@ Any command not internally handled by yadm is passed through to
 .BR git (1).
 Git commands or aliases are invoked with the yadm managed repository.
 The working directory for Git commands will be the configured
-.IR work-tree " (usually
-.IR $HOME ).
+.IR work-tree \ (usually\  $HOME ).
 
 Dotfiles are managed by using standard
 .B git
@@ -95,7 +94,7 @@ commands;
 .IR pull ,
 etc.
 
-.RI The " config
+.RI The\  config
 command is not passed directly through.
 Instead use the
 .I gitconfig
@@ -114,7 +113,7 @@ Execute
 .I $HOME/.config/yadm/bootstrap
 if it exists.
 .TP
-.BI clone " url
+.BI clone \ url
 Clone a remote repository for tracking dotfiles.
 After the contents of the remote repository have been fetched, a "check out" of
 the remote HEAD branch is attempted.
@@ -130,15 +129,15 @@ By default,
 will be used as the
 .IR work-tree ,
 but this can be overridden with the
-.BR -w " option.
+.BR \-w \ option.
 yadm can be forced to overwrite an existing repository by providing the
-.BR -f " option.
+.BR \-f \ option.
 If you want to use a branch other than the remote HEAD branch
 you can specify it using the
-.BR -b " option.
+.BR \-b \ option.
 By default yadm will ask the user if the bootstrap program should be run (if it
 exists). The options
-.BR --bootstrap " or " --no-bootstrap
+.BR \-\-bootstrap " or " \-\-no\-bootstrap
 will either force the bootstrap to be run, or prevent it from being run,
 without prompting the user.
 .TP
@@ -153,10 +152,9 @@ See the CONFIGURATION section for more details.
 Decrypt all files stored in
 .IR $HOME/.local/share/yadm/archive .
 Files decrypted will be relative to the configured
-.IR work-tree " (usually
-.IR $HOME ).
+.IR work-tree \ (usually\  $HOME ).
 Using the
-.B -l
+.B \-l
 option will list the files stored without extracting them.
 .TP
 .B encrypt
@@ -191,12 +189,12 @@ Emacs Tramp and Magit can manage files by using this configuration:
 With this config, use (magit-status "/yadm::").
 .RE
 .TP
-.BI git-crypt " options
+.BI git-crypt \ options
 If git-crypt is installed, this command allows you to pass options directly to
 git-crypt, with the environment configured to use the yadm repository.
 
-git-crypt enables transparent encryption and decryption of files in a git repository.
-You can read
+git-crypt enables transparent encryption and decryption of files in a git
+repository. You can read
 https://github.com/AGWA/git-crypt
 for details.
 .TP
@@ -232,17 +230,17 @@ By default,
 will be used as the
 .IR work-tree ,
 but this can be overridden with the
-.BR -w " option.
+.BR \-w \ option.
 yadm can be forced to overwrite an existing repository by providing the
-.BR -f " option.
+.BR \-f \ option.
 .TP
 .B list
 Print a list of files managed by yadm.
-.RB The " -a
+.RB The \ \-a
 option will cause all managed files to be listed.
 Otherwise, the list will only include files from the current directory or below.
 .TP
-.BI introspect " category
+.BI introspect \ category
 Report internal yadm data. Supported categories are
 .IR commands ,
 .IR configs ,
@@ -259,12 +257,12 @@ configuration
 .I yadm.auto-perms
 to "false".
 .TP
-.BI transcrypt " options
+.BI transcrypt \ options
 If transcrypt is installed, this command allows you to pass options directly to
 transcrypt, with the environment configured to use the yadm repository.
 
-transcrypt enables transparent encryption and decryption of files in a git repository.
-You can read
+transcrypt enables transparent encryption and decryption of files in a git
+repository. You can read
 https://github.com/elasticdog/transcrypt
 for details.
 .TP
@@ -283,7 +281,7 @@ your submodules cannot be de-initialized, the upgrade will fail. The most
 common reason submodules will fail to de-initialize is because they have local
 modifications. If you are willing to lose the local modifications to those
 submodules, you can use the
-.B -f
+.B \-f
 option with the "upgrade" command to force the de-initialization.
 
 After running "yadm upgrade", you should run "yadm status" to review changes
@@ -306,33 +304,33 @@ For example, the following alias could be used to override the repository
 directory.
 
 .RS
-alias yadm='yadm --yadm-repo /alternate/path/to/repo'
+alias yadm='yadm \-\-yadm\-repo /alternate/path/to/repo'
 .RE
 
 The following is the full list of universal options.
 Each option should be followed by a path.
 .TP
-.B -Y,--yadm-dir
+.B \-Y, \-\-yadm\-dir
 Override the yadm directory.
 yadm stores its configurations relative to this directory.
 .TP
-.B --yadm-data
+.B \-\-yadm\-data
 Override the yadm data directory.
 yadm stores its data relative to this directory.
 .TP
-.B --yadm-repo
+.B \-\-yadm\-repo
 Override the location of the yadm repository.
 .TP
-.B --yadm-config
+.B \-\-yadm\-config
 Override the location of the yadm configuration file.
 .TP
-.B --yadm-encrypt
+.B \-\-yadm\-encrypt
 Override the location of the yadm encryption configuration.
 .TP
-.B --yadm-archive
+.B \-\-yadm\-archive
 Override the location of the yadm encrypted files archive.
 .TP
-.B --yadm-bootstrap
+.B \-\-yadm\-bootstrap
 Override the location of the yadm bootstrap program.
 
 .SH CONFIGURATION
@@ -377,7 +375,8 @@ manually to update permissions.
 This feature is enabled by default.
 .TP
 .B yadm.auto-private-dirs
-Disable the automatic creating of private directories described in the section PERMISSIONS.
+Disable the automatic creating of private directories described in the section
+PERMISSIONS.
 .TP
 .B yadm.cipher
 Configure which encryption system is used by the encrypt/decrypt commands.
@@ -426,7 +425,7 @@ Disable the permission changes to
 .IR $HOME/.ssh/* .
 This feature is enabled by default.
 
-.RE
+.LP
 The following "local" configurations are not stored in the
 .IR $HOME/.config/yadm/config,
 they are stored in the local repository.
@@ -438,7 +437,7 @@ By default, no class will be matched.
 The local host can be assigned multiple classes using command:
 
 .RS
-yadm config --add local.class <additional-class>
+yadm config \-\-add local.class <additional-class>
 .RE
 .TP
 .B local.arch
@@ -486,22 +485,22 @@ Value is compared case-insensitive.
 These are the supported attributes, in the order of the weighted precedence:
 
 .TP
-.BR template , " t
+.BR template ,\  t
 Valid when the value matches a supported template processor.
 See the TEMPLATES section for more details.
 .TP
-.BR user ,  " u
+.BR user ,\  u
 Valid if the value matches the current user.
 Current user is calculated by running
-.BR "id -u -n" .
+.BR "id \-u \-n" .
 .TP
-.BR hostname , " h
+.BR hostname ,\  h
 Valid if the value matches the short hostname.
 Hostname is calculated by running
-.BR "uname -n" ,
+.BR "uname \-n" ,
 and trimming off any domain.
 .TP
-.BR class , " c
+.BR class ,\  c
 Valid if the value matches the
 .B local.class
 configuration.
@@ -510,38 +509,38 @@ Class must be manually set using
 See the CONFIGURATION section for more details about setting
 .BR local.class .
 .TP
-.BR distro , " d
+.BR distro ,\  d
 Valid if the value matches the distro.
 Distro is calculated by running
-.B "lsb_release -si"
+.B "lsb_release \-si"
 or by inspecting the ID from
 .BR "/etc/os-release" .
 .TP
-.BR distro_family , " f
+.BR distro_family ,\  f
 Valid if the value matches the distro family.
 Distro family is calculated by inspecting the ID_LIKE line from
 .B "/etc/os-release"
 (or ID if no ID_LIKE line is found).
 .TP
-.BR os , " o
+.BR os ,\  o
 Valid if the value matches the OS.
 OS is calculated by running
-.BR "uname -s" .
+.BR "uname \-s" .
 .TP
-.BR arch , " a
+.BR arch ,\  a
 Valid if the value matches the architecture.
 Architecture is calculated by running
-.BR "uname -m" .
+.BR "uname \-m" .
 .TP
 .B default
 Valid when no other alternate is valid.
 .TP
-.BR extension , " e
+.BR extension ,\  e
 A special "condition" that doesn't affect the selection process. Its purpose is
 instead to allow the alternate file to end with a certain extension to
 e.g. make editors highlight the content properly.
-.LP
 
+.LP
 .BR NOTE :
 The OS for "Windows Subsystem for Linux" is reported as "WSL", even
 though uname identifies as "Linux".
@@ -587,7 +586,8 @@ which looks like this:
 
 .IR $HOME/path/example.txt " -> " $HOME/path/example.txt##os.Darwin
 
-Since the hostname doesn't match any of the managed files, the more generic version is chosen.
+Since the hostname doesn't match any of the managed files, the more generic
+version is chosen.
 
 If running on a Linux server named "host4", the link will be:
 
@@ -667,9 +667,10 @@ To use the j2cli Jinja template processor, specify the value of "j2"  or
 "j2cli".
 .TP
 .B envtpl
-To use the envtpl Jinja template processor, specify the value of "j2" or "envtpl".
-.LP
+To use the envtpl Jinja template processor, specify the value of "j2" or
+"envtpl".
 
+.LP
 .BR NOTE :
 Specifying "j2" as the processor will attempt to use j2cli or envtpl, whichever
 is available.
@@ -681,15 +682,15 @@ During processing, the following variables are available in the template:
 
  Default              Jinja or ESH         Description
  -------------        -------------        ----------------------------
- yadm.arch            YADM_ARCH            uname -m
+ yadm.arch            YADM_ARCH            uname \-m
  yadm.class           YADM_CLASS           Last locally defined class
  yadm.classes         YADM_CLASSES         All classes
- yadm.distro          YADM_DISTRO          lsb_release -si
+ yadm.distro          YADM_DISTRO          lsb_release \-si
  yadm.distro_family   YADM_DISTRO_FAMILY   ID_LIKE from /etc/os-release
- yadm.hostname        YADM_HOSTNAME        uname -n (without domain)
- yadm.os              YADM_OS              uname -s
+ yadm.hostname        YADM_HOSTNAME        uname \-n (without domain)
+ yadm.os              YADM_OS              uname \-s
  yadm.source          YADM_SOURCE          Template filename
- yadm.user            YADM_USER            id -u -n
+ yadm.user            YADM_USER            id \-u \-n
  env.VAR                                   Environment variable VAR
 
 .BR NOTE :
@@ -767,8 +768,7 @@ configuration.
 To use this feature, a list of patterns must be created and saved as
 .IR $HOME/.config/yadm/encrypt .
 This list of patterns should be relative to the configured
-.IR work-tree " (usually
-.IR $HOME ).
+.IR work-tree \ (usually\  $HOME ).
 For example:
 
 .RS
@@ -785,11 +785,12 @@ Paths beginning with a "!" will be excluded.
 
 The
 .B yadm encrypt
-command will find all files matching the patterns, and prompt for a password. Once a
-password has confirmed, the matching files will be encrypted and saved as
+command will find all files matching the patterns, and prompt for a
+password. Once a password has confirmed, the matching files will be encrypted
+and saved as
 .IR $HOME/.local/share/yadm/archive .
-The "encrypt" and "archive" files should be added to the yadm repository so they are
-available across multiple systems.
+The "encrypt" and "archive" files should be added to the yadm repository so
+they are available across multiple systems.
 
 To decrypt these files later, or on another system run
 .B yadm decrypt
@@ -832,7 +833,6 @@ repository. See the following web sites for more information:
 - https://github.com/elasticdog/transcrypt
 
 - https://github.com/AGWA/git-crypt
-.LP
 
 .SH PERMISSIONS
 
@@ -841,7 +841,7 @@ dependent upon the user's umask. Because of this, yadm will automatically
 update the permissions of some file paths. The "group" and "others" permissions
 will be removed from the following files:
 
-.RI - " $HOME/.local/share/yadm/archive
+.RI -\  $HOME/.local/share/yadm/archive
 
 - All files matching patterns in
 .I $HOME/.config/yadm/encrypt
@@ -991,7 +991,7 @@ to the Git index and create a new commit
 .B yadm remote add origin <url>
 Add a remote origin to an existing repository
 .TP
-.B yadm push -u origin master
+.B yadm push \-u origin master
 Initial push of master to origin
 .TP
 .B echo ".ssh/*.key" >> $HOME/.config/yadm/encrypt
