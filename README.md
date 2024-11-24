@@ -18,11 +18,12 @@
 **yadm** is a tool for managing [dotfiles][].
 
 * Based on [Git][], with full range of Git's features
-* Supports system-specific alternative files or templated files
-* Encryption of private data using [GnuPG][], [OpenSSL][], [transcrypt][], or
-  [git-crypt][]
-* Customizable initialization (bootstrapping)
-* Customizable hooks for before and after any operation
+* Supports system-specific [alternative][feature-alternates] files or
+  [templated][feature-templates] files
+* [Encryption][feature-encryption] of private data using [GnuPG][],
+  [OpenSSL][], [transcrypt][], or [git-crypt][]
+* Customizable initialization ([bootstrapping][feature-bootstrap])
+* Customizable [hooks][feature-hooks] for before and after any operation
 
 Complete features, usage, examples and installation instructions can be found on
 the [yadm.io][website-link] website.
@@ -63,6 +64,11 @@ The star count helps others discover yadm.
 [develop-commits]: https://github.com/yadm-dev/yadm/commits/develop
 [develop-date]: https://img.shields.io/github/last-commit/yadm-dev/yadm/develop.svg?label=develop
 [dotfiles]: https://en.wikipedia.org/wiki/Hidden_file_and_hidden_directory
+[feature-alternates]: https://yadm.io/docs/alternates
+[feature-bootstrap]: https://yadm.io/docs/bootstrap
+[feature-hooks]: https://yadm.io/docs/hooks
+[feature-encryption]: https://yadm.io/docs/encryption
+[feature-templates]: https://yadm.io/docs/templates
 [gh-pages-badge]: https://img.shields.io/github/actions/workflow/status/yadm-dev/yadm/test.yml?branch=gh-pages
 [git-crypt]: https://github.com/AGWA/git-crypt
 [homebrew-badge]: https://img.shields.io/homebrew/v/yadm.svg
