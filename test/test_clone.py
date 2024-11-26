@@ -349,7 +349,7 @@ def test_clone_subdirectory(runner, paths, yadm_cmd, repo_config):
     # clone should succeed, and repo should be configured properly
     assert successful_clone(run, paths, repo_config)
 
-    # test that the conflicts are preserved in the work tree
+    # ensure that no changes found as this is a clean dotfiles clone
     run = runner(command=yadm_cmd("status", "-uno", "--porcelain"), cwd=subdir)
     assert run.success
     assert run.out == ""
