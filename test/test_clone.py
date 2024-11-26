@@ -343,8 +343,7 @@ def test_clone_subdirectory(runner, paths, yadm_cmd, repo_config):
     remote_url = f"file://{paths.remote}"
 
     # run the clone command
-    args = ["clone", "-w", paths.work]
-    args += [remote_url]
+    args = ["clone", "-w", paths.work, remote_url]
     run = runner(command=yadm_cmd(*args), cwd=subdir)
 
     # clone should succeed, and repo should be configured properly
