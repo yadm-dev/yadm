@@ -40,7 +40,8 @@ def test_alt_copy(runner, yadm_cmd, paths, tst_sys, setting, expect_link, pre_ex
     run = runner(yadm_cmd("alt"))
     assert run.success
     assert run.err == ""
-    assert "Linking" in run.out
+    action = "Copying" if setting is True else "Linking"
+    assert action in run.out
 
     assert alt_path.read() == expected_content
     assert alt_path.islink() == expect_link

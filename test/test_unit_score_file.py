@@ -89,7 +89,7 @@ def calculate_score(filename):
             else:
                 score = 0
                 break
-        elif label in TEMPLATE_LABELS:
+        elif label not in TEMPLATE_LABELS:
             score = 0
             break
     return score
@@ -190,7 +190,7 @@ def test_score_values(runner, yadm, default, arch, system, distro, cla, host, us
     expected = ""
     for filename, score in filenames.items():
         script += f"""
-            score_file "{filename}"
+            score_file "{filename}" "dest"
             echo "{filename}"
             echo "$score"
         """
@@ -255,7 +255,7 @@ def test_score_values_templates(runner, yadm):
     expected = ""
     for filename, score in filenames.items():
         script += f"""
-            score_file "{filename}"
+            score_file "{filename}" "dest"
             echo "{filename}"
             echo "$score"
         """
@@ -279,7 +279,7 @@ def test_template_recording(runner, yadm, cmd_generated):
 
     script = f"""
         YADM_TEST=1 source {yadm}
-        function record_template() {{ echo "template recorded"; }}
+        function record_score() {{ [ -n "$4" ] && echo "template recorded"; }}
         {mock}
         score_file "testfile##template.kind"
     """
@@ -289,15 +289,15 @@ def test_template_recording(runner, yadm, cmd_generated):
     assert run.out.rstrip() == expected
 
 
-def test_underscores_in_distro_and_family(runner, yadm):
-    """Test replacing spaces in distro / distro_family with underscores"""
+def test_underscores_and_upper_case_in_distro_and_family(runner, yadm):
+    """Test replacing spaces with underscores and lowering case in distro / distro_family"""
     local_distro = "test distro"
     local_distro_family = "test family"
     filenames = {
-        "filename##distro.test distro": 1004,
+        "filename##distro.Test Distro": 1004,
         "filename##distro.test-distro": 0,
         "filename##distro.test_distro": 1004,
-        "filename##distro_family.test family": 1008,
+        "filename##distro_family.test FAMILY": 1008,
         "filename##distro_family.test-family": 0,
         "filename##distro_family.test_family": 1008,
     }

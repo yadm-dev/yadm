@@ -171,6 +171,21 @@ def test_alt_templates(runner, paths, kind, label):
 
 
 @pytest.mark.usefixtures("ds1_copy")
+def test_alt_template_with_condition(runner, paths, tst_arch):
+    """Test template with extra condition"""
+    yadm_dir, yadm_data = setup_standard_yadm_dir(paths)
+
+    suffix = f"##template,arch.not{tst_arch}"
+    utils.create_alt_files(paths, suffix)
+    run = runner([paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "alt"])
+    assert run.success
+    assert run.err == ""
+
+    created = utils.parse_alt_output(run.out, linked=False)
+    assert len(created) == 0
+
+
+@pytest.mark.usefixtures("ds1_copy")
 @pytest.mark.parametrize("autoalt", [None, "true", "false"])
 def test_auto_alt(runner, yadm_cmd, paths, autoalt):
     """Test auto alt"""

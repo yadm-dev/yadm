@@ -166,188 +166,139 @@ function main() {
 # ****** Alternate Processing ******
 
 function score_file() {
-  src="$1"
-  tgt="${src%%##*}"
-  conditions="${src#*##}"
-
-  if [ "${tgt#"$YADM_ALT/"}" != "${tgt}" ]; then
-    tgt="${YADM_BASE}/${tgt#"$YADM_ALT/"}"
-  fi
+  local source="$1"
+  local target="$2"
+  local conditions="${source#*##}"
 
   score=0
+  local template_cmd=""
+
   IFS=',' read -ra fields <<< "$conditions"
   for field in "${fields[@]}"; do
-    label=${field%%.*}
-    value=${field#*.}
+    local label=${field%%.*}
+    local value=${field#*.}
     [ "$field" = "$label" ] && value="" # when .value is omitted
-    # extension isn't a condition and doesn't affect the score
-    if [[ "$label" =~ ^(e|extension)$ ]]; then
-      continue
-    fi
-    score=$((score + 1000))
-    # default condition
-    if [[ "$label" =~ ^(default)$ ]]; then
-      score=$((score + 0))
-    # variable conditions
-    elif [[ "$label" =~ ^(a|arch)$ ]]; then
-      if [ "$value" = "$local_arch" ]; then
-        score=$((score + 1))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(o|os)$ ]]; then
-      if [ "$value" = "$local_system" ]; then
-        score=$((score + 2))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(d|distro)$ ]]; then
-      if [ "${value/\ /_}" = "${local_distro/\ /_}" ]; then
-        score=$((score + 4))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(f|distro_family)$ ]]; then
-      if [ "${value/\ /_}" = "${local_distro_family/\ /_}" ]; then
-        score=$((score + 8))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(c|class)$ ]]; then
-      if in_list "$value" "${local_classes[@]}"; then
-        score=$((score + 16))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(h|hostname)$ ]]; then
-      if [ "$value" = "$local_host" ]; then
-        score=$((score + 32))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(u|user)$ ]]; then
-      if [ "$value" = "$local_user" ]; then
-        score=$((score + 64))
-      else
-        score=0
-        return
-      fi
-    # templates
-    elif [[ "$label" =~ ^(t|template|yadm)$ ]]; then
-      score=0
-      cmd=$(choose_template_cmd "$value")
-      if [ -n "$cmd" ]; then
-        record_template "$tgt" "$cmd" "$src"
-      else
-        debug "No supported template processor for template $src"
-        [ -n "$loud" ] && echo "No supported template processor for template $src"
-      fi
-      return 0
-    # unsupported values
-    else
-      if [[ "${src##*/}" =~ .\#\#. ]]; then
-        INVALID_ALT+=("$src")
-      fi
+
+    local -i delta=-1
+    case "$label" in
+      default)
+        delta=0
+        ;;
+      a|arch)
+        [ "$value" = "$local_arch" ] && delta=1
+        ;;
+      o|os)
+        [ "$value" = "$local_system" ] && delta=2
+        ;;
+      d|distro)
+        shopt -s nocasematch
+        [[ "${value// /_}" = "${local_distro// /_}" ]] && delta=4
+        shopt -u nocasematch
+        ;;
+      f|distro_family)
+        shopt -s nocasematch
+        [[ "${value// /_}" = "${local_distro_family// /_}" ]] && delta=8
+        shopt -u nocasematch
+        ;;
+      c|class)
+        in_list "$value" "${local_classes[@]}" && delta=16
+        ;;
+      h|hostname)
+        [ "$value" = "$local_host" ] && delta=32
+        ;;
+      u|user)
+        [ "$value" = "$local_user" ] && delta=64
+        ;;
+      e|extension)
+        # extension isn't a condition and doesn't affect the score
+        continue
+        ;;
+      t|template|yadm)
+        if [ -d "$source" ]; then
+          INVALID_ALT+=("$source")
+        else
+          template_cmd=$(choose_template_cmd "$value")
+          if [ -n "$template_cmd" ]; then
+            delta=0
+          else
+            debug "No supported template processor for template $source"
+            [ -n "$loud" ] && echo "No supported template processor for template $source"
+          fi
+        fi
+        ;;
+      *)
+        INVALID_ALT+=("$source")
+        ;;
+    esac
+
+    if (( delta < 0 )); then
       score=0
       return
     fi
+    score=$(( score + 1000 + delta ))
   done
 
-  record_score "$score" "$tgt" "$src"
+  record_score "$score" "$target" "$source" "$template_cmd"
 }
 
 function record_score() {
-  score="$1"
-  tgt="$2"
-  src="$3"
+  local score="$1"
+  local target="$2"
+  local source="$3"
+  local template_cmd="$4"
 
   # record nothing if the score is zero
-  [ "$score" -eq 0 ] && return
+  [ "$score" -eq 0 ] && [ -z "$template_cmd" ] && return
 
   # search for the index of this target, to see if we already are tracking it
-  index=-1
-  for search_index in "${!alt_targets[@]}"; do
-    if [ "${alt_targets[$search_index]}" = "$tgt" ]; then
-        index="$search_index"
-        break
+  local -i index=$((${#alt_targets[@]} - 1))
+  for (( ; index >= 0; --index )); do
+    if [ "${alt_targets[$index]}" = "$target" ]; then
+      break
     fi
   done
-  # if we don't find an existing index, create one by appending to the array
-  if [ "$index" -eq -1 ]; then
+
+  if [ $index -lt 0 ]; then
     # $YADM_CONFIG must be processed first, in case other templates lookup yadm configurations
-    if [ "$tgt" = "$YADM_CONFIG" ]; then
-        alt_targets=("$tgt" "${alt_targets[@]}")
-        alt_sources=("$src" "${alt_sources[@]}")
-        alt_scores=(0 "${alt_scores[@]}")
-        index=0
-        # increase the index of any existing alt_template_cmds
-        new_cmds=()
-        for cmd_index in "${!alt_template_cmds[@]}"; do
-            new_cmds[cmd_index+1]="${alt_template_cmds[$cmd_index]}"
-        done
-        alt_template_cmds=()
-        for cmd_index in "${!new_cmds[@]}"; do
-            alt_template_cmds[cmd_index]="${new_cmds[$cmd_index]}"
-        done
+    if [ "$target" = "$YADM_CONFIG" ]; then
+        alt_targets=("$target" "${alt_targets[@]}")
+
+        alt_sources=("$source" "${alt_sources[@]}")
+        alt_scores=("$score" "${alt_scores[@]}")
+        alt_template_cmds=("$template_cmd" "${alt_template_cmds[@]}")
     else
-        alt_targets+=("$tgt")
-        # set index to the last index (newly created one)
-        for index in "${!alt_targets[@]}"; do :; done
-        # and set its initial score to zero
-        alt_scores[index]=0
-     fi
-  fi
+      alt_targets+=("$target")
 
-  # record nothing if a template command is registered for this file
-  [ "${alt_template_cmds[$index]+isset}" ] && return
-
-  # record higher scoring sources
-  if [ "$score" -gt "${alt_scores[$index]}" ]; then
-    alt_scores[index]="$score"
-    alt_sources[index]="$src"
-  fi
-
-}
-
-function record_template() {
-  tgt="$1"
-  cmd="$2"
-  src="$3"
-
-  # search for the index of this target, to see if we already are tracking it
-  index=-1
-  for search_index in "${!alt_targets[@]}"; do
-    if [ "${alt_targets[$search_index]}" = "$tgt" ]; then
-        index="$search_index"
-        break
+      alt_sources+=("$source")
+      alt_scores+=("$score")
+      alt_template_cmds+=("$template_cmd")
     fi
-  done
-  # if we don't find an existing index, create one by appending to the array
-  if [ "$index" -eq -1 ]; then
-    alt_targets+=("$tgt")
-    # set index to the last index (newly created one)
-    for index in "${!alt_targets[@]}"; do :; done
+    return
   fi
 
-  # record the template command, last one wins
-  alt_template_cmds[index]="$cmd"
-  alt_sources[index]="$src"
+  if [[ -n "${alt_template_cmds[$index]}" ]]; then
+    if [[ -z "$template_cmd" || "$score" -lt "${alt_scores[$index]}" ]]; then
+      # No template command, or template command but lower score
+      return
+    fi
+  elif [[ -z "$template_cmd" && "$score" -le "${alt_scores[$index]}" ]]; then
+    # No template command and too low score
+    return
+  fi
 
+  # Record new alt
+  alt_sources[index]="$source"
+  alt_scores[index]="$score"
+  alt_template_cmds[index]="$template_cmd"
 }
 
 function choose_template_cmd() {
-  kind="$1"
+  local kind="$1"
 
-  if [ "$kind" = "default" ] || [ "$kind" = "" ] && awk_available; then
-    echo "template_default"
-  elif [ "$kind" = "esh" ] && esh_available; then
-    echo "template_esh"
+  if [ "$kind" = "default" ] || [ "$kind" = "" ]; then
+    awk_available && echo "template_default"
+  elif [ "$kind" = "esh" ]; then
+    esh_available && echo "template_esh"
   elif [ "$kind" = "j2cli" ] || [ "$kind" = "j2" ] && j2cli_available; then
     echo "template_j2cli"
   elif [ "$kind" = "envtpl" ] || [ "$kind" = "j2" ] && envtpl_available; then
@@ -488,7 +439,7 @@ EOF
     -v distro="$local_distro" \
     -v distro_family="$local_distro_family" \
     -v source="$input" \
-    -v source_dir="$(dirname "$input")" \
+    -v source_dir="$(builtin_dirname "$input")" \
     "$awk_pgm" \
     "$input" "${local_classes[@]}" > "$temp_file" || rm -f "$temp_file"
 
@@ -599,29 +550,45 @@ function alt() {
   # determine all tracked files
   local tracked_files=()
   local IFS=$'\n'
-  for tracked_file in $("$GIT_PROGRAM" ls-files | LC_ALL=C sort); do
+  for tracked_file in $("$GIT_PROGRAM" ls-files -- '*##*'); do
     tracked_files+=("$tracked_file")
   done
 
-  # generate data for removing stale links
-  local possible_alts=()
-  local IFS=$'\n'
-  for possible_alt in "${tracked_files[@]}" "${ENCRYPT_INCLUDE_FILES[@]}"; do
-    if [[ $possible_alt =~ .\#\#. ]]; then
-      base_alt="${possible_alt%%##*}"
-      yadm_alt="${YADM_BASE}/${base_alt}"
-      if [ "${yadm_alt#"$YADM_ALT/"}" != "${yadm_alt}" ]; then
-        base_alt="${yadm_alt#"$YADM_ALT/"}"
-      fi
-      possible_alts+=("$YADM_BASE/${base_alt}")
+  local alt_targets=()
+  local alt_sources=()
+  local alt_scores=()
+  local alt_template_cmds=()
+
+  # For removing stale links
+  local possible_alt_targets=()
+
+  local alt_source
+  for alt_source in "${tracked_files[@]}" "${ENCRYPT_INCLUDE_FILES[@]}"; do
+    local conditions="${alt_source#*##}"
+    if [ "$alt_source" = "$conditions" ]; then
+      continue
     fi
+
+    local target_base="${alt_source%%##*}"
+    alt_source="${YADM_BASE}/${target_base}##${conditions%%/*}"
+    local alt_target="${YADM_BASE}/${target_base}"
+    if [ "${alt_target#"$YADM_ALT/"}" != "$alt_target" ]; then
+      target_base="${alt_target#"$YADM_ALT/"}"
+    fi
+    alt_target="${YADM_BASE}/${target_base}"
+
+    if ! in_list "$alt_target" "${possible_alt_targets[@]}"; then
+      possible_alt_targets+=("$alt_target")
+    fi
+
+    score_file "$alt_source" "$alt_target"
   done
+
   local alt_linked=()
 
   alt_linking
   remove_stale_links
   report_invalid_alts
-
 }
 
 function report_invalid_alts() {
@@ -662,7 +629,7 @@ function remove_stale_links() {
   # if a possible alt IS linked, but it's source is not part of alt_linked,
   # remove it.
   if readlink_available; then
-    for stale_candidate in "${possible_alts[@]}"; do
+    for stale_candidate in "${possible_alt_targets[@]}"; do
       if [ -L "$stale_candidate" ]; then
         src=$(readlink "$stale_candidate" 2>/dev/null)
         if [ -n "$src" ]; then
@@ -681,8 +648,8 @@ function set_local_alt_values() {
   local -a all_classes
   all_classes=$(config --get-all local.class)
   while IFS='' read -r class; do
-      local_classes+=("$class")
-      local_class="$class"
+    local_classes+=("$class")
+    local_class="$class"
   done <<< "$all_classes"
 
   local_arch="$(config local.arch)"
@@ -712,50 +679,38 @@ function set_local_alt_values() {
 }
 
 function alt_linking() {
+  local -i index
+  for (( index = 0; index < ${#alt_targets[@]}; ++index )); do
+    local target="${alt_targets[$index]}"
+    local source="${alt_sources[$index]}"
+    local template_cmd="${alt_template_cmds[$index]}"
 
-  local alt_scores=()
-  local alt_targets=()
-  local alt_sources=()
-  local alt_template_cmds=()
+    if [[ -L "$target" ]]; then
+      rm -f "$target"
+    elif [[ -d "$target" ]]; then
+      echo "Skipping alt $source as $target is a directory"
+      continue
+    else
+      assert_parent "$target"
+    fi
 
-  for alt_path in $(for tracked in "${tracked_files[@]}"; do printf "%s\n" "$tracked" "${tracked%/*}"; done | LC_ALL=C sort -u) "${ENCRYPT_INCLUDE_FILES[@]}"; do
-    alt_path="$YADM_BASE/$alt_path"
-    if [[ "$alt_path" =~ .\#\#. ]]; then
-      if [ -e "$alt_path" ] ; then
-        score_file "$alt_path"
-      fi
+    if [[ -n "$template_cmd" ]]; then
+      debug "Creating $target from template $source"
+      [[ -n "$loud" ]] && echo "Creating $target from template $source"
+
+      "$template_cmd" "$source" "$target"
+    elif [[ "$do_copy" -eq 1 ]]; then
+      debug "Copying $source to $target"
+      [[ -n "$loud" ]] && echo "Copying $source to $target"
+
+      cp -f "$source" "$target"
+    else
+      debug "Linking $source to $target"
+      [[ -n "$loud" ]] && echo "Linking $source to $target"
+
+      ln_relative "$source" "$target"
     fi
   done
-
-  for index in "${!alt_targets[@]}"; do
-    tgt="${alt_targets[$index]}"
-    src="${alt_sources[$index]}"
-    template_cmd="${alt_template_cmds[$index]}"
-    if [ -n "$template_cmd" ]; then
-      # a template is defined, process the template
-      debug "Creating $tgt from template $src"
-      [ -n "$loud" ] && echo "Creating $tgt from template $src"
-      # ensure the destination path exists
-      assert_parent "$tgt"
-      # remove any existing symlink before processing template
-      [ -L "$tgt" ] && rm -f "$tgt"
-      "$template_cmd" "$src" "$tgt"
-    elif [ -n "$src" ]; then
-      # a link source is defined, create symlink
-      debug "Linking $src to $tgt"
-      [ -n "$loud" ] && echo "Linking $src to $tgt"
-      # ensure the destination path exists
-      assert_parent "$tgt"
-      if [ "$do_copy" -eq 1 ]; then
-        # remove any existing symlink before copying
-        [ -L "$tgt" ] && rm -f "$tgt"
-        cp -f "$src" "$tgt"
-      else
-        ln_relative "$src" "$tgt"
-      fi
-    fi
-  done
-
 }
 
 function ln_relative() {
@@ -765,7 +720,7 @@ function ln_relative() {
   local rel_source
   rel_source=$(relative_path "$(builtin_dirname "$target")" "$source")
 
-  ln -nfs "$rel_source" "$target"
+  ln -fs "$rel_source" "$target"
   alt_linked+=("$rel_source")
 }
 

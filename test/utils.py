@@ -12,7 +12,7 @@ ALT_DIR = "test alt/test alt dir"
 
 # Directory based alternates must have a tracked contained file.
 # This will be the test contained file name
-CONTAINED = "contained_file"
+CONTAINED = "contained_dir/contained_file"
 
 # These variables are used for making include files which will be processed
 # within jinja templates
@@ -84,7 +84,7 @@ def parse_alt_output(output, linked=True):
     """Parse output of 'alt', and return list of linked files"""
     regex = r"Creating (.+) from template (.+)$"
     if linked:
-        regex = r"Linking (.+) to (.+)$"
+        regex = r"(?:Copy|Link)ing (.+) to (.+)$"
     parsed_list = {}
     for line in output.splitlines():
         match = re.match(regex, line)
