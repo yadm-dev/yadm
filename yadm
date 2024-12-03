@@ -759,16 +759,13 @@ function alt_linking() {
 }
 
 function ln_relative() {
-  local full_source full_target target_dir
-  local full_source="$1"
-  local full_target="$2"
-  local target_dir="${full_target%/*}"
-  if [ "$target_dir" == "" ]; then
-    target_dir="/"
-  fi
+  local source="$1"
+  local target="$2"
+
   local rel_source
-  rel_source=$(relative_path "$target_dir" "$full_source")
-  ln -nfs "$rel_source" "$full_target"
+  rel_source=$(relative_path "$(builtin_dirname "$target")" "$source")
+
+  ln -nfs "$rel_source" "$target"
   alt_linked+=("$rel_source")
 }
 
@@ -2011,61 +2008,59 @@ function parse_encrypt() {
 function builtin_dirname() {
   # dirname is not builtin, and universally available, this is a built-in
   # replacement using parameter expansion
-  path="$1"
-  dname="${path%/*}"
-  if ! [[ "$path" =~ / ]]; then
-    echo "."
-  elif [ "$dname" = "" ]; then
-    echo "/"
-  else
-    echo "$dname"
+  local path="$1"
+  while [ "${path: -1}" = "/" ]; do
+    path="${path%/}"
+  done
+
+  local dir_name="${path%/*}"
+  while [ "${dir_name: -1}" = "/" ]; do
+    dir_name="${dir_name%/}"
+  done
+
+  if [ "$path" = "$dir_name" ]; then
+    dir_name="."
+  elif [ -z "$dir_name" ]; then
+    dir_name="/"
   fi
+  echo "$dir_name"
 }
 
 function relative_path() {
   # Output a path to $2/full, relative to $1/base
   #
-  # This fucntion created with ideas from
+  # This function created with ideas from
   # https://stackoverflow.com/questions/2564634
-  base="$1"
-  full="$2"
+  local base="$1"
+  if [ "${base:0:1}" != "/" ]; then
+    base="$PWD/$base"
+  fi
 
-  common_part="$base"
-  result=""
+  local full="$2"
+  if [ "${full:0:1}" != "/" ]; then
+    full="$PWD/$full"
+  fi
 
-  count=0
-  while [ "${full#"$common_part"}" == "${full}" ]; do
-      [ "$count" = "500" ] && return # this is a failsafe
-      # no match, means that candidate common part is not correct
-      # go up one level (reduce common part)
-      common_part="$(builtin_dirname "$common_part")"
-      # and record that we went back, with correct / handling
-      if [[ -z $result ]]; then
-          result=".."
-      else
-          result="../$result"
-      fi
-      count=$((count+1))
+  local common_part="$base"
+  local result=""
+
+  while [ "$common_part" != "$full" ]; do
+    if [ "$common_part" = "/" ]; then
+      # No common part found. Append / if result is set to make the final
+      # result correct.
+      result="${result:+$result/}"
+      break
+    elif [ "${full#"$common_part"/}" != "$full" ]; then
+      common_part="$common_part/"
+      result="${result:+$result/}"
+      break
+    fi
+    # Move to parent directory and update result
+    common_part=$(builtin_dirname "$common_part")
+    result="..${result:+/$result}"
   done
 
-  if [[ $common_part == "/" ]]; then
-      # special case for root (no common path)
-      result="$result/"
-  fi
-
-  # since we now have identified the common part,
-  # compute the non-common part
-  forward_part="${full#"$common_part"}"
-
-  # and now stick all parts together
-  if [[ -n $result ]] && [[ -n $forward_part ]]; then
-      result="$result$forward_part"
-  elif [[ -n $forward_part ]]; then
-      # extra slash removal
-      result="${forward_part:1}"
-  fi
-
-  echo "$result"
+  echo "$result${full#"$common_part"}"
 }
 
 # ****** Auto Functions ******
