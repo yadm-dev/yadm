@@ -95,17 +95,14 @@ whitespace between the variable name and the double braces. The `{{` and
 
 if-else-endif
 : Entire blocks of content can be included or excluded based on the value of a
-variable. Only equality can be tested. These blocks must start with
-`{% if yadm.variable == "value" %}` and end with `{% endif %}`. An alternative
-block can also be specified using the directive `{% else %}`. These directives
-must appear on lines by themselves. They may not appear on the same line. The
-"if" directive only supports testing a single variable, and there is no "elif"
-directive as there is in Jinja.
-<br><br>
-If multiple classes are defined, `yadm.class=="someclass"` will be true if *any*
-of the defined classes are "someclass".
-<br><br>
-Here is an example.
+variable. Both equality (`==`) and inequality (`!=`) can be tested. These
+blocks must start with `{% if yadm.variable == "value" %}` and end with
+`{% endif %}`. An alternative block can also be specified using the directive
+`{% else %}`. These directives must appear on lines by themselves. They may not
+appear on the same line. The "if" directive only supports testing a single
+variable, and there is no "elif" directive as there is in Jinja.  <br><br> If
+multiple classes are defined, `yadm.class=="someclass"` will be true if *any*
+of the defined classes are "someclass".  <br><br> Here is an example.
 
 ```jinja
 {% if yadm.os == "Darwin" %}
@@ -119,8 +116,8 @@ include
 : Content can be included from external files using the
 `{% include "filename" %}` syntax. The filename may include variables and
 should be either a path relative to the current template or an absolute
-path. The included file may itself also use variables, but if-else-endif or
-include directives are not supported. An example:
+path. The included file may itself also use variables, if-else-endif and
+include directives. An example:
 
 ```jinja
 {% include "extra/config.{{ yadm.os }}" %}
