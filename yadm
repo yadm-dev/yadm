@@ -1174,6 +1174,13 @@ function git_command() {
 }
 
 function help() {
+  readonly config="${YADM_CONFIG/$HOME/\$HOME}"
+  readonly encrypt="${YADM_ENCRYPT/$HOME/\$HOME}"
+  readonly bootstrap="${YADM_BOOTSTRAP/$HOME/\$HOME}"
+  readonly repo="${YADM_REPO/$HOME/\$HOME}"
+  readonly archive="${YADM_ARCHIVE/$HOME/\$HOME}"
+
+  readonly padding="                                "
 
   local msg
   IFS='' read -r -d '' msg << EOF
@@ -1201,11 +1208,11 @@ Commands:
   yadm transcrypt [OPTIONS]  - Run transcrypt commands for the yadm repo
 
 Files:
-  \$HOME/.config/yadm/config        - yadm's configuration file
-  \$HOME/.config/yadm/encrypt       - List of globs to encrypt/decrypt
-  \$HOME/.config/yadm/bootstrap     - Script run via: yadm bootstrap
-  \$HOME/.local/share/yadm/repo.git - yadm's Git repository
-  \$HOME/.local/share/yadm/archive  - Encrypted data stored here
+  $config${padding:${#config}} - yadm's configuration file
+  $encrypt${padding:${#encrypt}} - List of globs to encrypt/decrypt
+  $bootstrap${padding:${#bootstrap}} - Script run via: yadm bootstrap
+  $repo${padding:${#repo}} - yadm's Git repository
+  $archive${padding:${#archive}} - Encrypted data stored here
 
 Use "man yadm" for complete documentation.
 EOF
