@@ -502,14 +502,14 @@ See the CONFIGURATION section for more details about setting
 .BR local.class .
 .TP
 .BR distro , " d
-Valid if the value matches the distro.
+Valid if the value matches the distro (ignoring case).
 Distro is calculated by running
 .B "lsb_release -si"
 or by inspecting the ID from
 .BR "/etc/os-release" .
 .TP
 .BR distro_family , " f
-Valid if the value matches the distro family.
+Valid if the value matches the distro family (ignoring case).
 Distro family is calculated by inspecting the ID_LIKE line from
 .BR "/etc/os-release" .
 .TP

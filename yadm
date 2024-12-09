@@ -363,6 +363,10 @@ BEGIN {
             if (rhs == cls_array[idx]) { lhs = rhs; break }
           }
         }
+        else if (lhs == "yadm.distro" || lhs == "yadm.distro_family") {
+          lhs = tolower(replace_vars("{{" lhs "}}"))
+          rhs = tolower(rhs)
+        }
         else {
           lhs = replace_vars("{{" lhs "}}")
         }

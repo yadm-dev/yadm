@@ -86,7 +86,7 @@ wrong user 2
 {{% if yadm.distro == "wrongdistro1" %}}
 wrong distro 1
 {{% endif %}}
-{{% if yadm.distro == "{LOCAL_DISTRO}" %}}
+{{% if yadm.distro == "{LOCAL_DISTRO.upper()}" %}}
 Included section for distro = {{{{yadm.distro}}}} ({{{{yadm.distro}}}} again)
 {{% endif %}}
 {{% if yadm.distro == "wrongdistro2" %}}
@@ -95,7 +95,7 @@ wrong distro 2
 {{% if yadm.distro_family == "wrongfamily1" %}}
 wrong family 1
 {{% endif %}}
-{{% if yadm.distro_family == "{LOCAL_DISTRO_FAMILY}" %}}
+{{% if yadm.distro_family == "{LOCAL_DISTRO_FAMILY.upper()}" %}}
 Included section for distro_family = \
 {{{{yadm.distro_family}}}} ({{{{yadm.distro_family}}}} again)
 {{% endif %}}
