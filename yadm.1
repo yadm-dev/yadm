@@ -511,7 +511,8 @@ or by inspecting the ID from
 .BR distro_family , " f
 Valid if the value matches the distro family (ignoring case).
 Distro family is calculated by inspecting the ID_LIKE line from
-.BR "/etc/os-release" .
+.B "/etc/os-release"
+(or ID if no ID_LIKE line is found).
 .TP
 .BR os , " o
 Valid if the value matches the OS.

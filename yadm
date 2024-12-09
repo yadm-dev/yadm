@@ -1499,7 +1499,7 @@ function exclude_encrypted() {
 }
 
 function query_distro() {
-  distro=""
+  local distro=""
   if command -v "$LSB_RELEASE_PROGRAM" &> /dev/null; then
     distro=$($LSB_RELEASE_PROGRAM -si 2>/dev/null)
   elif [ -f "$OS_RELEASE" ]; then
@@ -1515,17 +1515,19 @@ function query_distro() {
 }
 
 function query_distro_family() {
-  family=""
+  local family=""
   if [ -f "$OS_RELEASE" ]; then
     while IFS='' read -r line || [ -n "$line" ]; do
       if [[ "$line" = ID_LIKE=* ]]; then
         family="${line#ID_LIKE=}"
-        family="${family//\"}"
         break
+      elif [[ "$line" = ID=* ]]; then
+        family="${line#ID=}"
+        # No break, only used as fallback in case ID_LIKE isn't found
       fi
     done < "$OS_RELEASE"
   fi
-  echo "$family"
+  echo "${family//\"}"
 }
 
 function process_global_args() {
