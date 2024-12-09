@@ -179,35 +179,32 @@ function score_file() {
     local value=${field#*.}
     [ "$field" = "$label" ] && value="" # when .value is omitted
 
+    shopt -s nocasematch
     local -i delta=-1
     case "$label" in
       default)
         delta=0
         ;;
       a|arch)
-        [ "$value" = "$local_arch" ] && delta=1
+        [[ "$value" = "$local_arch" ]] && delta=1
         ;;
       o|os)
-        [ "$value" = "$local_system" ] && delta=2
+        [[ "$value" = "$local_system" ]] && delta=2
         ;;
       d|distro)
-        shopt -s nocasematch
         [[ "${value// /_}" = "${local_distro// /_}" ]] && delta=4
-        shopt -u nocasematch
         ;;
       f|distro_family)
-        shopt -s nocasematch
         [[ "${value// /_}" = "${local_distro_family// /_}" ]] && delta=8
-        shopt -u nocasematch
         ;;
       c|class)
         in_list "$value" "${local_classes[@]}" && delta=16
         ;;
       h|hostname)
-        [ "$value" = "$local_host" ] && delta=32
+        [[ "$value" = "$local_host" ]] && delta=32
         ;;
       u|user)
-        [ "$value" = "$local_user" ] && delta=64
+        [[ "$value" = "$local_user" ]] && delta=64
         ;;
       e|extension)
         # extension isn't a condition and doesn't affect the score
@@ -230,6 +227,7 @@ function score_file() {
         INVALID_ALT+=("$source")
         ;;
     esac
+    shopt -u nocasematch
 
     if (( delta < 0 )); then
       score=0
@@ -295,16 +293,14 @@ function record_score() {
 function choose_template_cmd() {
   local kind="$1"
 
-  if [ "$kind" = "default" ] || [ "$kind" = "" ]; then
+  if [[ "${kind:-default}" = "default" ]]; then
     awk_available && echo "template_default"
-  elif [ "$kind" = "esh" ]; then
+  elif [[ "$kind" = "esh" ]]; then
     esh_available && echo "template_esh"
-  elif [ "$kind" = "j2cli" ] || [ "$kind" = "j2" ] && j2cli_available; then
+  elif [[ "$kind" = "j2cli" || "$kind" = "j2" ]] && j2cli_available; then
     echo "template_j2cli"
-  elif [ "$kind" = "envtpl" ] || [ "$kind" = "j2" ] && envtpl_available; then
+  elif [[ "$kind" = "envtpl" || "$kind" = "j2" ]] && envtpl_available; then
     echo "template_envtpl"
-  else
-    return # this "kind" of template is not supported
   fi
 
 }
@@ -354,21 +350,17 @@ BEGIN {
         match($0, /[!=]=/)
         op = substr($0, RSTART, RLENGTH)
         match($0, /".*"/)
-        rhs = replace_vars(substr($0, RSTART + 1, RLENGTH - 2))
+        rhs = tolower(replace_vars(substr($0, RSTART + 1, RLENGTH - 2)))
 
         if (lhs == "yadm.class") {
           lhs = "not" rhs
           split(classes, cls_array, "\n")
           for (idx in cls_array) {
-            if (rhs == cls_array[idx]) { lhs = rhs; break }
+            if (rhs == tolower(cls_array[idx])) { lhs = rhs; break }
           }
         }
-        else if (lhs == "yadm.distro" || lhs == "yadm.distro_family") {
-          lhs = tolower(replace_vars("{{" lhs "}}"))
-          rhs = tolower(rhs)
-        }
         else {
-          lhs = replace_vars("{{" lhs "}}")
+          lhs = tolower(replace_vars("{{" lhs "}}"))
         }
 
         if (op == "==") { skip[++level] = lhs != rhs }

@@ -54,37 +54,37 @@ def calculate_score(filename):
         if label in CONDITION["default"]["labels"]:
             score += 1000
         elif label in CONDITION["arch"]["labels"]:
-            if value == "testarch":
+            if value.lower() == "testarch":
                 score += 1000 + CONDITION["arch"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["system"]["labels"]:
-            if value == "testsystem":
+            if value.lower() == "testsystem":
                 score += 1000 + CONDITION["system"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["distro"]["labels"]:
-            if value == "testdistro":
+            if value.lower() == "testdistro":
                 score += 1000 + CONDITION["distro"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["class"]["labels"]:
-            if value == "testclass":
+            if value.lower() == "testclass":
                 score += 1000 + CONDITION["class"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["hostname"]["labels"]:
-            if value == "testhost":
+            if value.lower() == "testhost":
                 score += 1000 + CONDITION["hostname"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["user"]["labels"]:
-            if value == "testuser":
+            if value.lower() == "testuser":
                 score += 1000 + CONDITION["user"]["modifier"]
             else:
                 score = 0
@@ -105,12 +105,12 @@ def calculate_score(filename):
 def test_score_values(runner, yadm, default, arch, system, distro, cla, host, user):
     """Test score results"""
     # pylint: disable=too-many-branches
-    local_class = "testclass"
-    local_arch = "testarch"
-    local_system = "testsystem"
-    local_distro = "testdistro"
-    local_host = "testhost"
-    local_user = "testuser"
+    local_class = "testClass"
+    local_arch = "testARch"
+    local_system = "TESTsystem"
+    local_distro = "testDISTro"
+    local_host = "testHost"
+    local_user = "testUser"
     filenames = {"filename##": 0}
 
     if default:

@@ -35,13 +35,13 @@ wrong class 1
 {{% if yadm.class != "wronglcass" %}}
 Included section from !=
 {{%     endif\t\t  %}}
-{{% if yadm.class == "{LOCAL_CLASS}" %}}
+{{% if yadm.class == "{LOCAL_CLASS.lower()}" %}}
 Included section for class = {{{{yadm.class}}}} ({{{{yadm.class}}}} repeated)
 Multiple lines
 {{% else %}}
 Should not be included...
 {{% endif %}}
-{{% if yadm.class == "{LOCAL_CLASS2}" %}}
+{{% if yadm.class == "{LOCAL_CLASS2.upper()}" %}}
 Included section for second class
 {{% endif %}}
 {{% if yadm.class == "wrongclass2" %}}
@@ -50,7 +50,7 @@ wrong class 2
 {{% if yadm.arch == "wrongarch1" %}}
 wrong arch 1
 {{% endif %}}
-{{% if yadm.arch == "{LOCAL_ARCH}" %}}
+{{% if yadm.arch == "{LOCAL_ARCH.title()}" %}}
 Included section for arch = {{{{yadm.arch}}}} ({{{{yadm.arch}}}} repeated)
 {{% endif %}}
 {{% if yadm.arch == "wrongarch2" %}}
@@ -59,7 +59,7 @@ wrong arch 2
 {{% if yadm.os == "wrongos1" %}}
 wrong os 1
 {{% endif %}}
-{{% if yadm.os == "{LOCAL_SYSTEM}" %}}
+{{% if yadm.os == "{LOCAL_SYSTEM.lower()}" %}}
 Included section for os = {{{{yadm.os}}}} ({{{{yadm.os}}}} repeated)
 {{% endif %}}
 {{% if yadm.os == "wrongos2" %}}
@@ -68,7 +68,7 @@ wrong os 2
 {{% if yadm.hostname == "wronghost1" %}}
 wrong host 1
 {{% endif %}}
-{{% if yadm.hostname == "{LOCAL_HOST}" %}}
+{{% if yadm.hostname == "{LOCAL_HOST.upper()}" %}}
 Included section for host = {{{{yadm.hostname}}}} ({{{{yadm.hostname}}}} again)
 {{% endif %}}
 {{% if yadm.hostname == "wronghost2" %}}
@@ -77,7 +77,7 @@ wrong host 2
 {{% if yadm.user == "wronguser1" %}}
 wrong user 1
 {{% endif %}}
-{{% if yadm.user == "{LOCAL_USER}" %}}
+{{% if yadm.user == "{LOCAL_USER.title()}" %}}
 Included section for user = {{{{yadm.user}}}} ({{{{yadm.user}}}} repeated)
 {{% endif %}}
 {{% if yadm.user == "wronguser2" %}}
@@ -86,7 +86,7 @@ wrong user 2
 {{% if yadm.distro == "wrongdistro1" %}}
 wrong distro 1
 {{% endif %}}
-{{% if yadm.distro == "{LOCAL_DISTRO.upper()}" %}}
+{{% if yadm.distro == "{LOCAL_DISTRO.lower()}" %}}
 Included section for distro = {{{{yadm.distro}}}} ({{{{yadm.distro}}}} again)
 {{% endif %}}
 {{% if yadm.distro == "wrongdistro2" %}}
@@ -102,7 +102,7 @@ Included section for distro_family = \
 {{% if yadm.distro_family == "wrongfamily2" %}}
 wrong family 2
 {{% endif %}}
-{{% if env.VAR == "{ENV_VAR}" %}}
+{{% if env.VAR == "{ENV_VAR.title()}" %}}
 Included section for env.VAR = {{{{env.VAR}}}} ({{{{env.VAR}}}} again)
 {{% endif %}}
 {{% if env.VAR == "wrongenvvar" %}}

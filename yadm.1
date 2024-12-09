@@ -474,6 +474,9 @@ be omitted. Most attributes can be abbreviated as a single letter.
 
   <attribute>[.<value>]
 
+.BR NOTE :
+Value is compared case-insensitive.
+
 These are the supported attributes, in the order of the weighted precedence:
 
 .TP
@@ -502,14 +505,14 @@ See the CONFIGURATION section for more details about setting
 .BR local.class .
 .TP
 .BR distro , " d
-Valid if the value matches the distro (ignoring case).
+Valid if the value matches the distro.
 Distro is calculated by running
 .B "lsb_release -si"
 or by inspecting the ID from
 .BR "/etc/os-release" .
 .TP
 .BR distro_family , " f
-Valid if the value matches the distro family (ignoring case).
+Valid if the value matches the distro family.
 Distro family is calculated by inspecting the ID_LIKE line from
 .B "/etc/os-release"
 (or ID if no ID_LIKE line is found).
@@ -638,6 +641,9 @@ upon
 .BR awk ,
 which is available on most *nix systems. To use this processor,
 specify the value of "default" or just leave the value off (e.g. "##template").
+
+.BR NOTE :
+This template processor performs case-insensitive comparisions in if statements.
 .TP
 .B ESH
 ESH is a template processor written in POSIX compliant shell. It allows
