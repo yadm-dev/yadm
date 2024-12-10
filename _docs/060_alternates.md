@@ -23,15 +23,16 @@ commas.
 
 Each condition is an attribute/value pair, separated by a period. Some
 conditions do not require a "value", and in that case, the period and value can
-be omitted. Most attributes can be abbreviated as a single letter.
+be omitted. Most attributes can be abbreviated as a single letter. Values are
+compared case-insensitive.
 
 | Attribute | Meaning |
 | - | - |
 | `arch`, `a` | Valid if the value matches the architecture. Architecture is calculated by running <code>uname&nbsp;&#8209;m</code>. |
 | `class`, `c` | Valid if the value matches the local.class configuration. Class must be manually set using <code>yadm&nbsp;config&nbsp;local.class&nbsp;&lt;class&gt;</code>. |
 | `default` | Valid when no other alternate is valid. |
-| `distro`, `d` | Valid if the value matches the distro. Distro is calculated by running <code>lsb_release&nbsp;&#8209;si</code> or inspecting <code>/etc/os-release</code> |
-| `distro_family`, `f` | Valid if the value matches the distro family. Distro family is calculated by inspecting the `ID_LIKE` line from <code>/etc/os-release</code> |
+| `distro`, `d` | Valid if the value matches the distro. Distro is calculated by running <code>lsb_release&nbsp;&#8209;si</code> or inspecting `ID` from <code>/etc/os-release</code> |
+| `distro_family`, `f` | Valid if the value matches the distro family. Distro family is calculated by inspecting `ID_LIKE` from <code>/etc/os-release</code> (or `ID` if `ID_LIKE` isn't found) |
 | `extension`, `e` | A special "condition" that doesn't affect the selection process. Its purpose is instead to allow the alternate file to end with a certain extension to e.g. make editors highlight the content properly. |
 | `hostname`, `h` | Valid if the value matches the short hostname. Hostname is calculated by running <code>uname&nbsp;&#8209;n</code>, and trimming off any domain. |
 | `os`, `o` | Valid if the value matches the OS. OS is calculated by running <code>uname&nbsp;&#8209;s</code>. <sup>*</sup> |
@@ -43,9 +44,6 @@ The OS for "Windows Subsystem for Linux" is reported as "WSL", even though uname
 <br/>
 *
 The OS for Linux-like runtimes for Windows (e.g. MinGW, Cygwin) is obtained by running `uname -o`.
-<br/>
-*
-If `lsb_release` is not available, "distro" will be the ID specified in `/etc/os-release`.
 </sup></sub>
 
 You may use any number of conditions, in any order. An alternate will only be
@@ -117,9 +115,10 @@ yadm configuration—with the `yadm config` command. The following sets the
 
     yadm config local.class Work
 
-Similarly, the values of `arch`, `os`, `hostname`, and `user` can be manually
-overridden using the configuration options `local.arch`, `local.os`,
-`local.hostname`, and `local.user`.
+Similarly, the values of `arch`, `os`, `hostname`, `user`, `distro`, and
+`distro_family` can be manually overridden using the configuration options
+`local.arch`, `local.os`, `local.hostname`, `local.user`, `local.distro`, and
+`local.distro-family`.
 
 Additional local classes can be defined using the `--add` switch.
 
