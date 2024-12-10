@@ -139,6 +139,8 @@ def supported_configs():
     return [
         "local.arch",
         "local.class",
+        "local.distro",
+        "local.distro-family",
         "local.hostname",
         "local.os",
         "local.user",

@@ -427,7 +427,7 @@ Disable the permission changes to
 This feature is enabled by default.
 
 .RE
-The following five "local" configurations are not stored in the
+The following "local" configurations are not stored in the
 .IR $HOME/.config/yadm/config,
 they are stored in the local repository.
 
@@ -452,6 +452,12 @@ Override the OS for the purpose of symlinking alternate files.
 .TP
 .B local.user
 Override the user for the purpose of symlinking alternate files.
+.TP
+.B local.distro
+Override the distro for the purpose of symlinking alternate files.
+.TP
+.B local.distro-family
+Override the distro family for the purpose of symlinking alternate files.
 
 .SH ALTERNATES
 
@@ -618,13 +624,15 @@ command. The following sets the class to be "Work".
 
   yadm config local.class Work
 
-Similarly, the values of architecture, os, hostname, and user can be manually
-overridden using the configuration options
+Similarly, the values of architecture, os, hostname, user, distro, and
+distro_family can be manually overridden using the configuration options
 .BR local.arch ,
 .BR local.os ,
 .BR local.hostname ,
+.BR local.user ,
+.BR local.distro ,
 and
-.BR local.user .
+.BR local.distro-family .
 
 .SH TEMPLATES
 

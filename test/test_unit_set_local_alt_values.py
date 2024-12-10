@@ -13,6 +13,8 @@ import utils
         "os",
         "hostname",
         "user",
+        "distro",
+        "distro-family",
     ],
     ids=[
         "no-override",
@@ -21,11 +23,15 @@ import utils
         "override-os",
         "override-hostname",
         "override-user",
+        "override-distro",
+        "override-distro-family",
     ],
 )
 @pytest.mark.usefixtures("ds1_copy")
-def test_set_local_alt_values(runner, yadm, paths, tst_arch, tst_sys, tst_host, tst_user, override):
-    """Use issue_legacy_path_warning"""
+def test_set_local_alt_values(
+    runner, yadm, paths, tst_arch, tst_sys, tst_host, tst_user, tst_distro, tst_distro_family, override
+):
+    """Test handling of local alt values"""
     script = f"""
         YADM_TEST=1 source {yadm} &&
         set_operating_system &&
@@ -34,8 +40,10 @@ def test_set_local_alt_values(runner, yadm, paths, tst_arch, tst_sys, tst_host, 
         echo "class='$local_class'"
         echo "arch='$local_arch'"
         echo "os='$local_system'"
-        echo "host='$local_host'"
+        echo "hostname='$local_host'"
         echo "user='$local_user'"
+        echo "distro='$local_distro'"
+        echo "distro-family='$local_distro_family'"
     """
 
     if override == "class":
@@ -48,46 +56,18 @@ def test_set_local_alt_values(runner, yadm, paths, tst_arch, tst_sys, tst_host, 
     assert run.success
     assert run.err == ""
 
-    if override == "class":
-        assert "class='override'" in run.out
-    else:
-        assert "class=''" in run.out
+    default_values = {
+        "class": "",
+        "arch": tst_arch,
+        "os": tst_sys,
+        "hostname": tst_host,
+        "user": tst_user,
+        "distro": tst_distro,
+        "distro-family": tst_distro_family,
+    }
 
-    if override == "arch":
-        assert "arch='override'" in run.out
-    else:
-        assert f"arch='{tst_arch}'" in run.out
-
-    if override == "os":
-        assert "os='override'" in run.out
-    else:
-        assert f"os='{tst_sys}'" in run.out
-
-    if override == "hostname":
-        assert "host='override'" in run.out
-    else:
-        assert f"host='{tst_host}'" in run.out
-
-    if override == "user":
-        assert "user='override'" in run.out
-    else:
-        assert f"user='{tst_user}'" in run.out
-
-
-def test_distro_and_family(runner, yadm):
-    """Assert that local_distro/local_distro_family are set"""
-
-    script = f"""
-        YADM_TEST=1 source {yadm}
-        function config() {{ echo "$1"; }}
-        function query_distro() {{ echo "testdistro"; }}
-        function query_distro_family() {{ echo "testfamily"; }}
-        set_local_alt_values
-        echo "distro='$local_distro'"
-        echo "distro_family='$local_distro_family'"
-    """
-    run = runner(command=["bash"], inp=script)
-    assert run.success
-    assert run.err == ""
-    assert "distro='testdistro'" in run.out
-    assert "distro_family='testfamily'" in run.out
+    for key, value in default_values.items():
+        if key == override:
+            assert f"{key}='override'" in run.out
+        else:
+            assert f"{key}='{value}'" in run.out

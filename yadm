@@ -649,28 +649,35 @@ function set_local_alt_values() {
   done <<< "$all_classes"
 
   local_arch="$(config local.arch)"
-  if [ -z "$local_arch" ] ; then
+  if [[ -z "$local_arch" ]]; then
     local_arch=$(uname -m)
   fi
 
   local_system="$(config local.os)"
-  if [ -z "$local_system" ] ; then
+  if [[ -z "$local_system" ]]; then
     local_system="$OPERATING_SYSTEM"
   fi
 
   local_host="$(config local.hostname)"
-  if [ -z "$local_host" ] ; then
+  if [[ -z "$local_host" ]]; then
     local_host=$(uname -n)
     local_host=${local_host%%.*} # trim any domain from hostname
   fi
 
   local_user="$(config local.user)"
-  if [ -z "$local_user" ] ; then
+  if [[ -z "$local_user" ]]; then
     local_user=$(id -u -n)
   fi
 
-  local_distro="$(query_distro)"
-  local_distro_family="$(query_distro_family)"
+  local_distro="$(config local.distro)"
+  if [[ -z "$local_distro" ]]; then
+    local_distro="$(query_distro)"
+  fi
+
+  local_distro_family="$(config local.distro-family)"
+  if [[ -z "$local_distro_family" ]]; then
+    local_distro_family="$(query_distro_family)"
+  fi
 
 }
 
@@ -849,7 +856,7 @@ EOF
 function config() {
 
   use_repo_config=0
-  local_options="^local\.(class|arch|os|hostname|user)$"
+  local_options="^local\.(class|arch|os|hostname|user|distro|distro-family)$"
   for option in "$@"; do
     [[ "$option" =~ $local_options ]] && use_repo_config=1
   done
@@ -1230,6 +1237,8 @@ function introspect_configs() {
   read -r -d '' msg <<-EOF
 local.arch
 local.class
+local.distro
+local.distro-family
 local.hostname
 local.os
 local.user
