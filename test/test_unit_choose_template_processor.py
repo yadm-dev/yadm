@@ -1,4 +1,4 @@
-"""Unit tests: choose_template_cmd"""
+"""Unit tests: choose_template_processor"""
 
 import pytest
 
@@ -8,7 +8,7 @@ import pytest
 def test_kind_default(runner, yadm, awk, label):
     """Test kind: default"""
 
-    expected = "template_default"
+    expected = "default"
     awk_avail = "true"
 
     if not awk:
@@ -21,7 +21,7 @@ def test_kind_default(runner, yadm, awk, label):
     script = f"""
         YADM_TEST=1 source {yadm}
         function awk_available {{ {awk_avail}; }}
-        template="$(choose_template_cmd "{label}")"
+        template="$(choose_template_processor "{label}")"
         echo "TEMPLATE:$template"
     """
     run = runner(command=["bash"], inp=script)
@@ -43,9 +43,9 @@ def test_kind_j2cli_envtpl(runner, yadm, envtpl, j2cli, label):
     j2cli_avail = "true" if j2cli else "false"
 
     if label in ("j2cli", "j2") and j2cli:
-        expected = "template_j2cli"
+        expected = "j2cli"
     elif label in ("envtpl", "j2") and envtpl:
-        expected = "template_envtpl"
+        expected = "envtpl"
     else:
         expected = ""
 
@@ -53,7 +53,7 @@ def test_kind_j2cli_envtpl(runner, yadm, envtpl, j2cli, label):
         YADM_TEST=1 source {yadm}
         function envtpl_available {{ {envtpl_avail}; }}
         function j2cli_available {{ {j2cli_avail}; }}
-        template="$(choose_template_cmd "{label}")"
+        template="$(choose_template_processor "{label}")"
         echo "TEMPLATE:$template"
     """
     run = runner(command=["bash"], inp=script)

@@ -140,7 +140,7 @@ def test_template_esh(runner, yadm, tmpdir):
         local_user="{LOCAL_USER}"
         local_distro="{LOCAL_DISTRO}"
         local_distro_family="{LOCAL_DISTRO_FAMILY}"
-        template_esh "{input_file}" "{output_file}"
+        template esh "{input_file}" "{output_file}"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success
@@ -159,7 +159,7 @@ def test_source(runner, yadm, tmpdir):
 
     script = f"""
         YADM_TEST=1 source {yadm}
-        template_esh "{input_file}" "{output_file}"
+        template esh "{input_file}" "{output_file}"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success

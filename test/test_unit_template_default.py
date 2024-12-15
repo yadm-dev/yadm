@@ -231,7 +231,7 @@ def test_template_default(runner, yadm, tmpdir):
         local_user="{LOCAL_USER}"
         local_distro="{LOCAL_DISTRO}"
         local_distro_family="{LOCAL_DISTRO_FAMILY}"
-        template_default "{input_file}" "{output_file}"
+        template default "{input_file}" "{output_file}"
     """
     run = runner(command=["bash"], inp=script, env={"VAR": ENV_VAR})
     assert run.success
@@ -251,7 +251,7 @@ def test_source(runner, yadm, tmpdir):
     script = f"""
         YADM_TEST=1 source {yadm}
         set_awk
-        template_default "{input_file}" "{output_file}"
+        template default "{input_file}" "{output_file}"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success
@@ -285,7 +285,7 @@ def test_include(runner, yadm, tmpdir):
         set_awk
         local_class="{LOCAL_CLASS}"
         local_system="{LOCAL_SYSTEM}"
-        template_default "{input_file}" "{output_file}"
+        template default "{input_file}" "{output_file}"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success
@@ -305,7 +305,7 @@ def test_nested_ifs(runner, yadm, tmpdir):
         YADM_TEST=1 source {yadm}
         set_awk
         local_user="me"
-        template_default "{input_file}" "{output_file}"
+        template default "{input_file}" "{output_file}"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success
@@ -323,7 +323,7 @@ def test_env(runner, yadm, tmpdir):
     script = f"""
         YADM_TEST=1 source {yadm}
         set_awk
-        template_default "{input_file}" "{output_file}"
+        template default "{input_file}" "{output_file}"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success

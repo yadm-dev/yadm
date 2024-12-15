@@ -8,7 +8,7 @@ OCTAL = "7654"
 NON_OCTAL = "9876"
 
 
-@pytest.mark.parametrize("stat_broken", [True, False], ids=["normal", "stat broken"])
+@pytest.mark.parametrize("stat_broken", [False, True], ids=["normal", "stat broken"])
 def test_copy_perms(runner, yadm, tmpdir, stat_broken):
     """Test function copy_perms"""
     src_mode = 0o754

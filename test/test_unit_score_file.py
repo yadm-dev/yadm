@@ -267,14 +267,14 @@ def test_score_values_templates(runner, yadm):
     assert run.out == expected
 
 
-@pytest.mark.parametrize("cmd_generated", [True, False], ids=["supported-template", "unsupported-template"])
-def test_template_recording(runner, yadm, cmd_generated):
-    """Template should be recorded if choose_template_cmd outputs a command"""
+@pytest.mark.parametrize("processor_generated", [True, False], ids=["supported-template", "unsupported-template"])
+def test_template_recording(runner, yadm, processor_generated):
+    """Template should be recorded if choose_template_processor outputs a command"""
 
-    mock = "function choose_template_cmd() { return; }"
+    mock = "function choose_template_processor() { return; }"
     expected = ""
-    if cmd_generated:
-        mock = 'function choose_template_cmd() { echo "test_cmd"; }'
+    if processor_generated:
+        mock = 'function choose_template_processor() { echo "test_processor"; }'
         expected = "template recorded"
 
     script = f"""
