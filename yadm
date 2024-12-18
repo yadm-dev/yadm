@@ -1679,6 +1679,25 @@ EOF
 
 }
 
+function parse_work_dir() {
+  WORKTREE_VAL=$($GIT_PROGRAM -C "$YADM_REPO" config core.worktree 2>/dev/null)
+  
+  # core.worktree value is empty, This means we are working with a root git repository not configured for yadm
+  if [[ -z $WORKTREE_VAL ]]; then
+    IS_REPO=$($GIT_PROGRAM -C "$YADM_REPO" rev-parse --is-inside-work-tree > /dev/null 2>&1)
+    if [[ -d "$YADM_REPO" &&  -n "$IS_REPO"  ]]; then
+      echo "$YADM_REPO"
+    else
+      echo "$HOME"
+    fi
+  elif [[ $WORKTREE_VAL == /* ]]; then # core.worktree is an absolute path
+    echo "$WORKTREE_VAL"
+  else # core.worktree is relative path (submodule not configured for yadm), combine with YADM_REPO to find absolute path
+    COMBINED_PATH=$(realpath "$YADM_REPO/$WORKTREE_VAL")
+    readlink -e "$COMBINED_PATH" || error_out "Unable to parse work directory"
+  fi
+}
+
 function configure_paths() {
 
   # change paths to be relative to YADM_DIR
@@ -1716,7 +1735,7 @@ function configure_paths() {
   # obtain YADM_WORK from repo if it exists
   if [ -d "$GIT_DIR" ]; then
     local work
-    work=$(unix_path "$("$GIT_PROGRAM" config core.worktree)")
+    work=$(parse_work_dir)
     [ -n "$work" ] && YADM_WORK="$work"
   fi
 
