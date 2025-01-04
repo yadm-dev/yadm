@@ -163,8 +163,8 @@ function main() {
 }
 
 git_program() {
-	[[ -z $DEBUG ]] || printf "\e[1;32m%s\e[0m\n" "$GIT_PROGRAM ${*@Q}" >&2
-	"$GIT_PROGRAM" "$@"
+	[[ -z $DEBUG ]] || printf "\e[1;32m%s\e[0m\n" "'$GIT_PROGRAM' '-C' '$PWD' ${*@Q}" >&2
+	"$GIT_PROGRAM" "-C" "$PWD" "$@"
 }
 
 # ****** Alternate Processing ******
