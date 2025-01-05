@@ -792,6 +792,8 @@ function clean() {
 
 function clone() {
 
+  cd_work "Clone" || return
+
   DO_BOOTSTRAP=1
   local -a args
   local -i do_checkout=1
@@ -869,8 +871,6 @@ function clone() {
   # finally check out (unless instructed not to) all files that don't exist in $YADM_WORK
   if [[ $do_checkout -ne 0 ]]; then
       [ -n "$DEBUG" ] && display_private_perms "pre-checkout"
-
-      cd_work "Clone" || return
 
       "$GIT_PROGRAM" ls-files --deleted | while IFS= read -r file; do
           "$GIT_PROGRAM" checkout -- ":/$file"
