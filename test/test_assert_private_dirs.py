@@ -32,7 +32,7 @@ def test_pdirs_missing(runner, yadm_cmd, paths, home):
     # run status
     run = runner(command=yadm_cmd("status"), env=env)
     assert run.success
-    assert all(line.startswith("\x1b[1;32mgit ") for line in run.err.splitlines())
+    assert all(line.startswith("\x1b[1;32m'git' ") for line in run.err.splitlines())
     assert "On branch master" in run.out
 
     # confirm directories are created
