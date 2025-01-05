@@ -162,6 +162,10 @@ function main() {
 
 }
 
+git_program() {
+	[[ -z $DEBUG ]] || printf "\e[1;32m%s\e[0m\n" "'$GIT_PROGRAM' '-C' '$PWD' ${*@Q}" >&2
+	"$GIT_PROGRAM" "-C" "$PWD" "$@"
+}
 
 # ****** Alternate Processing ******
 
@@ -599,7 +603,7 @@ function alt() {
   # determine all tracked files
   local tracked_files=()
   local IFS=$'\n'
-  for tracked_file in $("$GIT_PROGRAM" ls-files | LC_ALL=C sort); do
+  for tracked_file in $(git_program ls-files | LC_ALL=C sort); do
     tracked_files+=("$tracked_file")
   done
 
@@ -834,7 +838,7 @@ function clone() {
   # remove existing if forcing the clone to happen anyway
   [ -d "$YADM_REPO" ] && {
     debug "Removing existing repo prior to clone"
-    "$GIT_PROGRAM" -C "$YADM_WORK" submodule deinit -f --all
+    git_program -C "$YADM_WORK" submodule deinit -f --all
     rm -rf "$YADM_REPO"
   }
 
@@ -845,7 +849,7 @@ function clone() {
   # first clone without checkout
   debug "Doing an initial clone of the repository"
   (cd "$wc" &&
-       "$GIT_PROGRAM" -c core.sharedrepository=0600 clone --no-checkout \
+       git_program -c core.sharedrepository=0600 clone --no-checkout \
                       --separate-git-dir="$YADM_REPO" "${args[@]}" repo.git) || {
       debug "Removing repo after failed clone"
       rm -rf "$YADM_REPO" "$wc"
@@ -855,12 +859,12 @@ function clone() {
   rm -rf "$wc"
 
   # then reset the index as the --no-checkout flag makes the index empty
-  "$GIT_PROGRAM" reset --quiet -- .
+  git_program reset --quiet -- .
 
   if [ "$YADM_WORK" = "$HOME" ]; then
     debug "Determining if repo tracks private directories"
     for private_dir in $(private_dirs all); do
-      found_log=$("$GIT_PROGRAM" log -n 1 -- "$private_dir" 2>/dev/null)
+      found_log=$(git_program log -n 1 -- "$private_dir" 2>/dev/null)
       if [ -n "$found_log" ]; then
         debug "Private directory $private_dir is tracked by repo"
         assert_private_dirs "$private_dir"
@@ -872,11 +876,11 @@ function clone() {
   if [[ $do_checkout -ne 0 ]]; then
       [ -n "$DEBUG" ] && display_private_perms "pre-checkout"
 
-      "$GIT_PROGRAM" ls-files --deleted | while IFS= read -r file; do
-          "$GIT_PROGRAM" checkout -- ":/$file"
+      git_program ls-files --deleted | while IFS= read -r file; do
+          git_program checkout -- ":/$file"
       done
 
-      if [ -n "$("$GIT_PROGRAM" ls-files --modified)" ]; then
+      if [ -n "$(git_program ls-files --modified)" ]; then
         local msg
         IFS='' read -r -d '' msg <<EOF
 **NOTE**
@@ -928,7 +932,7 @@ EOF
 
     # operate on the yadm repo's configuration file
     # this is always local to the machine
-    "$GIT_PROGRAM" config "$@"
+    git_program config "$@"
 
     CHANGES_POSSIBLE=1
 
@@ -936,7 +940,7 @@ EOF
     # make sure parent folder of config file exists
     assert_parent "$YADM_CONFIG"
     # operate on the yadm configuration file
-    "$GIT_PROGRAM" config --file="$(mixed_path "$YADM_CONFIG")" "$@"
+    git_program config --file="$(mixed_path "$YADM_CONFIG")" "$@"
 
   fi
 
@@ -1079,14 +1083,14 @@ function encrypt() {
   fi
 
   # offer to add YADM_ARCHIVE if untracked
-  archive_status=$("$GIT_PROGRAM" status --porcelain -uall "$(mixed_path "$YADM_ARCHIVE")" 2>/dev/null)
+  archive_status=$(git_program status --porcelain -uall "$(mixed_path "$YADM_ARCHIVE")" 2>/dev/null)
   archive_regex="^\?\?"
   if [[ $archive_status =~ $archive_regex ]] ; then
     echo "It appears that $YADM_ARCHIVE is not tracked by yadm's repository."
     echo "Would you like to add it now? (y/n)"
     read -r answer < /dev/tty
     if [[ $answer =~ ^[yY]$ ]] ; then
-      "$GIT_PROGRAM" add "$(mixed_path "$YADM_ARCHIVE")"
+      git_program add "$(mixed_path "$YADM_ARCHIVE")"
     fi
   fi
 
@@ -1169,7 +1173,7 @@ function git_command() {
 
   # pass commands through to git
   debug "Running git command $GIT_PROGRAM $*"
-  "$GIT_PROGRAM" "$@"
+  git_program "$@"
   return "$?"
 }
 
@@ -1224,13 +1228,13 @@ function init() {
   # remove existing if forcing the init to happen anyway
   [ -d "$YADM_REPO" ] && {
     debug "Removing existing repo prior to init"
-    "$GIT_PROGRAM" -C "$YADM_WORK" submodule deinit -f --all
+    git_program -C "$YADM_WORK" submodule deinit -f --all
     rm -rf "$YADM_REPO"
   }
 
   # init a new bare repo
   debug "Init new repo"
-  "$GIT_PROGRAM" init --shared=0600 --bare "$(mixed_path "$YADM_REPO")" "$@"
+  git_program init --shared=0600 --bare "$(mixed_path "$YADM_REPO")" "$@"
   configure_repo
 
   CHANGES_POSSIBLE=1
@@ -1325,7 +1329,7 @@ function list() {
   fi
 
   # list tracked files
-  "$GIT_PROGRAM" ls-files
+  git_program ls-files
 
 }
 
@@ -1395,18 +1399,18 @@ function upgrade() {
 
       # Must absorb git dirs, otherwise deinit below will fail for modules that have
       # been cloned first and then added as a submodule.
-      "$GIT_PROGRAM" submodule absorbgitdirs
+      git_program submodule absorbgitdirs
 
       local submodule_status
-      submodule_status=$("$GIT_PROGRAM" -C "$YADM_WORK" submodule status)
+      submodule_status=$(git_program -C "$YADM_WORK" submodule status)
       while read -r sha submodule rest; do
           [ "$submodule" == "" ] && continue
           if [[ "$sha" = -* ]]; then
               continue
           fi
-          "$GIT_PROGRAM" -C "$YADM_WORK" submodule deinit ${FORCE:+-f} -- "$submodule" || {
+          git_program -C "$YADM_WORK" submodule deinit ${FORCE:+-f} -- "$submodule" || {
               for other in "${submodules[@]}"; do
-                  "$GIT_PROGRAM" -C "$YADM_WORK" submodule update --init --recursive -- "$other"
+                  git_program -C "$YADM_WORK" submodule update --init --recursive -- "$other"
               done
               error_out "Unable to upgrade. Could not deinit submodule $submodule"
           }
@@ -1431,8 +1435,8 @@ function upgrade() {
     echo "Moving $LEGACY_ARCHIVE to $YADM_ARCHIVE"
     assert_parent "$YADM_ARCHIVE"
     # test to see if path is "tracked" in repo, if so 'git mv' must be used
-    if "$GIT_PROGRAM" ls-files --error-unmatch "$LEGACY_ARCHIVE" &> /dev/null; then
-      "$GIT_PROGRAM" mv "$LEGACY_ARCHIVE" "$YADM_ARCHIVE" && repo_updates=1
+    if git_program ls-files --error-unmatch "$LEGACY_ARCHIVE" &> /dev/null; then
+      git_program mv "$LEGACY_ARCHIVE" "$YADM_ARCHIVE" && repo_updates=1
     else
       mv -i "$LEGACY_ARCHIVE" "$YADM_ARCHIVE"
     fi
@@ -1453,8 +1457,8 @@ function upgrade() {
       echo "Moving $legacy_path to $new_filename"
       assert_parent "$new_filename"
       # test to see if path is "tracked" in repo, if so 'git mv' must be used
-      if "$GIT_PROGRAM" ls-files --error-unmatch "$legacy_path" &> /dev/null; then
-        "$GIT_PROGRAM" mv "$legacy_path" "$new_filename" && repo_updates=1
+      if git_program ls-files --error-unmatch "$legacy_path" &> /dev/null; then
+        git_program mv "$legacy_path" "$new_filename" && repo_updates=1
       else
         mv -i "$legacy_path" "$new_filename"
       fi
@@ -1463,7 +1467,7 @@ function upgrade() {
 
   # handle submodules, which need to be reinitialized
   for submodule in "${submodules[@]}"; do
-      "$GIT_PROGRAM" -C "$YADM_WORK" submodule update --init --recursive -- "$submodule"
+      git_program -C "$YADM_WORK" submodule update --init --recursive -- "$submodule"
   done
 
   [ "$actions_performed" -eq 0 ] && \
@@ -1479,7 +1483,7 @@ function upgrade() {
 function version() {
 
   echo "bash version $BASH_VERSION"
-  printf " "; "$GIT_PROGRAM" --version
+  printf " "; git_program --version
   echo "yadm version $VERSION"
   exit_with_hook 0
 
@@ -1749,7 +1753,7 @@ function configure_paths() {
   # obtain YADM_WORK from repo if it exists
   if [ -d "$GIT_DIR" ]; then
     local work
-    work=$(unix_path "$("$GIT_PROGRAM" config core.worktree)")
+    work=$(unix_path "$(git_program config core.worktree)")
     [ -n "$work" ] && YADM_WORK="$work"
   fi
 
@@ -1768,16 +1772,16 @@ function configure_repo() {
   debug "Configuring new repo"
 
   # change bare to false (there is a working directory)
-  "$GIT_PROGRAM" config core.bare 'false'
+  git_program config core.bare 'false'
 
   # set the worktree for the yadm repo
-  "$GIT_PROGRAM" config core.worktree "$(mixed_path "$YADM_WORK")"
+  git_program config core.worktree "$(mixed_path "$YADM_WORK")"
 
   # by default, do not show untracked files and directories
-  "$GIT_PROGRAM" config status.showUntrackedFiles no
+  git_program config status.showUntrackedFiles no
 
   # possibly used later to ensure we're working on the yadm repo
-  "$GIT_PROGRAM" config yadm.managed 'true'
+  git_program config yadm.managed 'true'
 
 }
 
@@ -1791,7 +1795,7 @@ function set_operating_system() {
 
   case "$OPERATING_SYSTEM" in
     CYGWIN*|MINGW*|MSYS*)
-      git_version="$("$GIT_PROGRAM" --version 2>/dev/null)"
+      git_version="$(git_program --version 2>/dev/null)"
       if [[ "$git_version" =~ windows ]] ; then
           USE_CYGPATH=1
       fi
