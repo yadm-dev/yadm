@@ -93,7 +93,13 @@ def tst_distro_family(runner):
 @pytest.fixture(scope="session")
 def tst_sys():
     """Test session's uname value"""
-    return platform.system()
+    system = platform.system()
+    if system == "Linux":
+        # Additional check for WSL
+        with open("/proc/version", "r", encoding="utf-8") as f:
+            if "icrosoft" in f.read():
+                return "WSL"
+    return system
 
 
 @pytest.fixture(scope="session")
