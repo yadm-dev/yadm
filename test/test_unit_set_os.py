@@ -24,7 +24,8 @@ def test_set_operating_system(runner, paths, tst_sys, proc_value, expected_os):
     # Normally /proc/version (set in PROC_VERSION) is inspected to identify
     # WSL. During testing, we will override that value.
     proc_version = paths.root.join("proc_version")
-    proc_version.write(proc_value)
+    if proc_value != "missing":
+        proc_version.write(proc_value)
     script = f"""
         YADM_TEST=1 source {paths.pgm}
         PROC_VERSION={proc_version}
@@ -35,8 +36,5 @@ def test_set_operating_system(runner, paths, tst_sys, proc_value, expected_os):
     assert run.success
     assert run.err == ""
     if expected_os == "uname":
-        if tst_sys != "WSL":
-            expected_os = tst_sys
-        else:
-            expected_os = "Linux"
+        expected_os = tst_sys if tst_sys != "WSL" else "Linux"
     assert run.out.rstrip() == expected_os

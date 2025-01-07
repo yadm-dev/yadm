@@ -102,9 +102,9 @@ def tst_sys():
     system = platform.system()
     if system == "Linux":
         # Additional check for WSL
-        with open("/proc/version", "r", encoding="utf-8") as f:
+        with open("/proc/version", encoding="utf-8") as f:
             if "icrosoft" in f.read():
-                return "WSL"
+                system = "WSL"
     return system
 
 

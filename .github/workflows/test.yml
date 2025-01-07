@@ -21,52 +21,68 @@ jobs:
           - ubuntu-24.04
           - macos-13
           - macos-15
+          - windows-2022
+
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - uses: actions/checkout@v4
+
+      - uses: Vampire/setup-wsl@v4
+        if: ${{ runner.os == 'Windows' }}
 
       - name: Install dependencies on Linux
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y expect
-          if [ "${{ matrix.os }}" != "ubuntu-20.04" ]; then
-            sudo apt-get install -y j2cli
-          fi
+          sudo apt-get install -y \
+            expect \
+            ${{ matrix.os != 'ubuntu-20.04' && 'j2cli' || '' }}
 
       - name: Install dependencies on macOS
         if: ${{ runner.os == 'macOS' }}
         run: |
           command -v expect || brew install expect
 
+      - name: Install dependencies on Windows (WSL)
+        if: ${{ runner.os == 'Windows' }}
+        shell: wsl-bash {0}
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            dos2unix \
+            expect \
+            gettext-base \
+            git \
+            gnupg \
+            j2cli \
+            lsb-release \
+            man \
+            python3-pip
+
       - name: Prepare tools directory
         run: |
-          mkdir "$RUNNER_TEMP/tools"
-          echo "$RUNNER_TEMP/tools" >> "$GITHUB_PATH"
+          mkdir "${{ runner.temp }}/tools"
+          echo "${{ runner.temp }}/tools" >> "${{ github.path }}"
 
       - name: Install shellcheck
         run: |
-          if [ "$RUNNER_OS" = "macOS" ]; then
-            OS=darwin
-          else
-            OS=linux
-          fi
+          cd "${{ runner.temp }}"
 
-          if [ "$RUNNER_ARCH" = "ARM64" ]; then
-            ARCH=aarch64
-          else
-            ARCH=x86_64
-          fi
-
-          cd "$RUNNER_TEMP"
+          OS=${{ runner.os == 'macOS' && 'darwin' || 'linux' }}
+          ARCH=${{ runner.arch == 'ARM64' && 'aarch64' || 'x86_64' }}
 
           BASE_URL="https://github.com/koalaman/shellcheck/releases/download"
           SC="v$SC_VER/shellcheck-v$SC_VER.$OS.$ARCH.tar.xz"
+
           curl -L "$BASE_URL/$SC" | tar Jx shellcheck-v$SC_VER/shellcheck
           mv shellcheck-v$SC_VER/shellcheck tools
 
       - name: Install esh
         run: |
-          cd "$RUNNER_TEMP/tools"
+          cd "${{ runner.temp }}/tools"
 
           BASE_URL="https://github.com/jirutka/esh/raw/refs/tags"
           curl -L -o esh "$BASE_URL/v$ESH_VER/esh"
@@ -76,8 +92,9 @@ jobs:
         run: |
           for version in 1.12.0 2.5.0; do
             git fetch origin $version:refs/tags/$version
-            git cat-file blob $version:yadm > "$RUNNER_TEMP/tools/yadm-$version"
-            chmod +x "$RUNNER_TEMP/tools/yadm-$version"
+            git cat-file blob $version:yadm \
+              > "${{ runner.temp }}/tools/yadm-$version"
+            chmod +x "${{ runner.temp }}/tools/yadm-$version"
           done
 
       - name: Set up Python 3.11
@@ -86,13 +103,26 @@ jobs:
         with:
           python-version: 3.11
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r test/requirements.txt
-
-      - name: Run tests
+      - name: Install dependencies and run tests (Linux/macOS)
+        if: ${{ runner.os != 'Windows' }}
         run: |
           git config --global user.email test@yadm.io
           git config --global user.name "Yadm Test"
-          pytest -v --color=yes --basetemp="$RUNNER_TEMP/pytest"
+
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r test/requirements.txt
+          pytest -v --color=yes --basetemp="${{ runner.temp }}/pytest"
+
+      - name: Install dependencies and run tests (WSL)
+        if: ${{ runner.os == 'Windows' }}
+        shell: wsl-bash {0}
+        run: |
+          git config --global user.email test@yadm.io
+          git config --global user.name "Yadm Test"
+
+          dos2unix yadm.1 .github/workflows/*.yml test/pinentry-mock
+          chmod +x test/pinentry-mock
+
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r test/requirements.txt
+          pytest -v --color=yes
