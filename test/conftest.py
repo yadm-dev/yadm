@@ -81,13 +81,19 @@ def tst_distro(runner):
 
 
 @pytest.fixture(scope="session")
-def tst_distro_family(runner):
+def tst_distro_family():
     """Test session's distro_family"""
     family = ""
     with contextlib.suppress(Exception):
-        run = runner(command=["grep", "-oP", r"ID_LIKE=\K.+", "/etc/os-release"], report=False)
-        family = run.out.strip()
-    return family
+        with open("/etc/os-release", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("ID_LIKE="):
+                    family = line[8:]
+                    break
+                if line.startswith("ID="):
+                    family = line[3:]
+                    # No break, only used as fallback in case ID_LIKE isn't found
+    return family.replace('"', "").rstrip()
 
 
 @pytest.fixture(scope="session")
