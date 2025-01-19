@@ -119,6 +119,7 @@ jobs:
         run: |
           git config --global user.email test@yadm.io
           git config --global user.name "Yadm Test"
+          git config --global protocol.file.allow always
 
           dos2unix yadm.1 .github/workflows/*.yml test/pinentry-mock
           chmod +x test/pinentry-mock

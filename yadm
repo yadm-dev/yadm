@@ -754,7 +754,7 @@ function clone() {
   DO_BOOTSTRAP=1
   local -a args
   local -i do_checkout=1
-  local -i do_submodules=0
+  local -a submodules
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --bootstrap) # force bootstrap, without prompt
@@ -769,10 +769,13 @@ function clone() {
       -n | --no-checkout)
         do_checkout=0
         ;;
-      --recursive)
-        do_submodules=1
+      --recursive | --recurse-submodules)
+        submodules+=(":/")
         ;;
-      --bare | --mirror | --recurse-submodules* | --separate-git-dir=*)
+      --recurse-submodules=*)
+        submodules+=(":/${1#*=}")
+        ;;
+      --bare | --mirror | --separate-git-dir=*)
         # ignore arguments without separate parameter
         ;;
       --separate-git-dir)
@@ -839,8 +842,8 @@ function clone() {
       "$GIT_PROGRAM" checkout -- ":/$file"
     done
 
-    if [[ $do_submodules -ne 0 ]]; then
-      "$GIT_PROGRAM" submodule update --init --recursive
+    if [ ${#submodules[@]} -gt 0 ]; then
+      "$GIT_PROGRAM" submodule update --init --recursive -- "${submodules[@]}"
     fi
 
     if [ -n "$("$GIT_PROGRAM" ls-files --modified)" ]; then
