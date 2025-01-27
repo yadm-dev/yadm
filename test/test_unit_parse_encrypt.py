@@ -97,6 +97,7 @@ def create_test_encrypt_data(paths):
 
     # wildcards
     edata += "wild*\n"
+    edata += "*card1\n"  # matches same file as the one above
     paths.work.join("wildcard1").write("", ensure=True)
     paths.work.join("wildcard2").write("", ensure=True)
     expected.add("wildcard1")
