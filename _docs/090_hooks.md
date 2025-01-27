@@ -22,6 +22,12 @@ Hooks have the following environment variables available to them at runtime:
 YADM_HOOK_COMMAND
 : The command which triggered the hook
 
+YADM_HOOK_DATA
+: The path to the yadm data directory
+
+YADM_HOOK_DIR
+: The path to the yadm directory
+
 YADM_HOOK_EXIT
 : The exit status of the yadm command
 
