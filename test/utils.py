@@ -61,12 +61,8 @@ def create_alt_files(
     new_dir = basepath.join(ALT_DIR + suffix).join(CONTAINED)
     new_dir.write(ALT_DIR + suffix, ensure=True)
 
-    # Do not test directory support for jinja alternates
-    test_paths = [new_file1, new_file2]
-    test_names = [ALT_FILE1, ALT_FILE2]
-    if not re.match(r"##(t$|t\.|template|yadm)", suffix):
-        test_paths += [new_dir]
-        test_names += [ALT_DIR]
+    test_paths = [new_file1, new_file2, new_dir]
+    test_names = [ALT_FILE1, ALT_FILE2, ALT_DIR]
 
     for test_path in test_paths:
         if content:

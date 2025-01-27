@@ -169,7 +169,7 @@ function main() {
 function score_file() {
   local source="$1"
   local target="$2"
-  local conditions="${source#*##}"
+  local conditions="$3"
 
   score=0
   local template_processor=""
@@ -223,7 +223,7 @@ function score_file() {
         continue
         ;;
       t | template | yadm)
-        if [ -d "$source" ] || ((negate)); then
+        if ((negate)); then
           INVALID_ALT+=("$source")
         else
           template_processor=$(choose_template_processor "$value")
@@ -578,42 +578,52 @@ function alt() {
   local alt_scores=()
   local alt_template_processors=()
 
-  # For removing stale links
-  local possible_alt_targets=()
-
-  local alt_source
-  for alt_source in "${tracked_files[@]}" "${ENCRYPT_INCLUDE_FILES[@]}"; do
-    local conditions="${alt_source#*##}"
-    if [ "$alt_source" = "$conditions" ]; then
+  local filename
+  for filename in "${tracked_files[@]}" "${ENCRYPT_INCLUDE_FILES[@]}"; do
+    local suffix="${filename#*##}"
+    if [ "$filename" = "$suffix" ]; then
       continue
     fi
+    local conditions="${suffix%%/*}"
+    suffix="${suffix:${#conditions}}"
 
-    local target_base="${alt_source%%##*}"
-    alt_source="${YADM_BASE}/${target_base}##${conditions%%/*}"
-    local alt_target="${YADM_BASE}/${target_base}"
-    if [ "${alt_target#"$YADM_ALT/"}" != "$alt_target" ]; then
-      target_base="${alt_target#"$YADM_ALT/"}"
+    local target="${YADM_BASE}/${filename%%##*}"
+    if [ "${target#"$YADM_ALT/"}" != "$target" ]; then
+      target="${YADM_BASE}/${target#"$YADM_ALT/"}"
     fi
-    alt_target="${YADM_BASE}/${target_base}"
+    local source="${YADM_BASE}/${filename}"
 
-    if ! in_list "$alt_target" "${possible_alt_targets[@]}"; then
-      possible_alt_targets+=("$alt_target")
+    # If conditions are given on a directory we check if this alt, without the
+    # filename part, has a target that's a symlink pointing at this source
+    # (which was the legacy behavior for yadm) and if so remove this target.
+    if [ -n "$suffix" ]; then
+      if [ -L "$target" ]; then
+        if [ "$target" -ef "${YADM_BASE}/${filename%"$suffix"}" ]; then
+          rm -f "$target"
+        fi
+      fi
+      target="$target$suffix"
     fi
 
-    score_file "$alt_source" "$alt_target"
+    # Remove target if it's a symlink pointing at source
+    if [ -L "$target" ] && [ "$target" -ef "$source" ]; then
+      rm -f "$target"
+    fi
+
+    score_file "${source}" "$target" "$conditions"
   done
 
   local alt_linked=()
 
   alt_linking
-  remove_stale_links
   report_invalid_alts
 }
 
 function report_invalid_alts() {
   [ "$LEGACY_WARNING_ISSUED" = "1" ] && return
   [ "${#INVALID_ALT[@]}" = "0" ] && return
-  local path_list
+  local path_list=""
+  local invalid
   for invalid in "${INVALID_ALT[@]}"; do
     path_list="$path_list    * $invalid"$'\n'
   done
@@ -641,25 +651,6 @@ ${path_list}
 ***********
 EOF
   printf '%s\n' "$msg" >&2
-}
-
-function remove_stale_links() {
-  # review alternate candidates for stale links
-  # if a possible alt IS linked, but it's source is not part of alt_linked,
-  # remove it.
-  if readlink_available; then
-    for stale_candidate in "${possible_alt_targets[@]}"; do
-      if [ -L "$stale_candidate" ]; then
-        src=$(readlink "$stale_candidate" 2>/dev/null)
-        if [ -n "$src" ]; then
-          for review_link in "${alt_linked[@]}"; do
-            [ "$src" = "$review_link" ] && continue 2
-          done
-          rm -f "$stale_candidate"
-        fi
-      fi
-    done
-  fi
 }
 
 function set_local_alt_values() {
@@ -2261,10 +2252,6 @@ function envtpl_available() {
 }
 function esh_available() {
   command -v "$ESH_PROGRAM" &>/dev/null && return
-  return 1
-}
-function readlink_available() {
-  command -v "readlink" &>/dev/null && return
   return 1
 }
 

@@ -39,12 +39,10 @@ CONDITION = {
 TEMPLATE_LABELS = ["t", "template", "yadm"]
 
 
-def calculate_score(filename):
+def calculate_score(conditions):
     """Calculate the expected score"""
     # pylint: disable=too-many-branches
     score = 0
-
-    _, conditions = filename.split("##", 1)
 
     for condition in conditions.split(","):
         label = condition
@@ -111,70 +109,70 @@ def test_score_values(runner, yadm, default, arch, system, distro, cla, host, us
     local_distro = "testDISTro"
     local_host = "testHost"
     local_user = "testUser"
-    filenames = {"filename##": 0}
+    conditions = {"": 0}
 
     if default:
-        for filename in list(filenames):
+        for condition in list(conditions):
             for label in CONDITION[default]["labels"]:
-                newfile = filename
-                if not newfile.endswith("##"):
-                    newfile += ","
-                newfile += label
-                filenames[newfile] = calculate_score(newfile)
+                newcond = condition
+                if newcond:
+                    newcond += ","
+                newcond += label
+                conditions[newcond] = calculate_score(newcond)
     if arch:
-        for filename in list(filenames):
+        for condition in list(conditions):
             for match in [True, False]:
                 for label in CONDITION[arch]["labels"]:
-                    newfile = filename
-                    if not newfile.endswith("##"):
-                        newfile += ","
-                    newfile += ".".join([label, local_arch if match else "badarch"])
-                    filenames[newfile] = calculate_score(newfile)
+                    newcond = condition
+                    if newcond:
+                        newcond += ","
+                    newcond += ".".join([label, local_arch if match else "badarch"])
+                    conditions[newcond] = calculate_score(newcond)
     if system:
-        for filename in list(filenames):
+        for condition in list(conditions):
             for match in [True, False]:
                 for label in CONDITION[system]["labels"]:
-                    newfile = filename
-                    if not newfile.endswith("##"):
-                        newfile += ","
-                    newfile += ".".join([label, local_system if match else "badsys"])
-                    filenames[newfile] = calculate_score(newfile)
+                    newcond = condition
+                    if newcond:
+                        newcond += ","
+                    newcond += ".".join([label, local_system if match else "badsys"])
+                    conditions[newcond] = calculate_score(newcond)
     if distro:
-        for filename in list(filenames):
+        for condition in list(conditions):
             for match in [True, False]:
                 for label in CONDITION[distro]["labels"]:
-                    newfile = filename
-                    if not newfile.endswith("##"):
-                        newfile += ","
-                    newfile += ".".join([label, local_distro if match else "baddistro"])
-                    filenames[newfile] = calculate_score(newfile)
+                    newcond = condition
+                    if newcond:
+                        newcond += ","
+                    newcond += ".".join([label, local_distro if match else "baddistro"])
+                    conditions[newcond] = calculate_score(newcond)
     if cla:
-        for filename in list(filenames):
+        for condition in list(conditions):
             for match in [True, False]:
                 for label in CONDITION[cla]["labels"]:
-                    newfile = filename
-                    if not newfile.endswith("##"):
-                        newfile += ","
-                    newfile += ".".join([label, local_class if match else "badclass"])
-                    filenames[newfile] = calculate_score(newfile)
+                    newcond = condition
+                    if newcond:
+                        newcond += ","
+                    newcond += ".".join([label, local_class if match else "badclass"])
+                    conditions[newcond] = calculate_score(newcond)
     if host:
-        for filename in list(filenames):
+        for condition in list(conditions):
             for match in [True, False]:
                 for label in CONDITION[host]["labels"]:
-                    newfile = filename
-                    if not newfile.endswith("##"):
-                        newfile += ","
-                    newfile += ".".join([label, local_host if match else "badhost"])
-                    filenames[newfile] = calculate_score(newfile)
+                    newcond = condition
+                    if newcond:
+                        newcond += ","
+                    newcond += ".".join([label, local_host if match else "badhost"])
+                    conditions[newcond] = calculate_score(newcond)
     if user:
-        for filename in list(filenames):
+        for condition in list(conditions):
             for match in [True, False]:
                 for label in CONDITION[user]["labels"]:
-                    newfile = filename
-                    if not newfile.endswith("##"):
-                        newfile += ","
-                    newfile += ".".join([label, local_user if match else "baduser"])
-                    filenames[newfile] = calculate_score(newfile)
+                    newcond = condition
+                    if newcond:
+                        newcond += ","
+                    newcond += ".".join([label, local_user if match else "baduser"])
+                    conditions[newcond] = calculate_score(newcond)
 
     script = f"""
         YADM_TEST=1 source {yadm}
@@ -187,15 +185,15 @@ def test_score_values(runner, yadm, default, arch, system, distro, cla, host, us
         local_host={local_host}
         local_user={local_user}
     """
-    expected = ""
-    for filename, score in filenames.items():
+    expected = []
+    for condition, score in conditions.items():
         script += f"""
-            score_file "{filename}" "dest"
-            echo "{filename}"
-            echo "$score"
+            score_file "source" "target" "{condition}"
+            echo "{condition}=$score"
         """
-        expected += filename + "\n"
-        expected += str(score) + "\n"
+        expected.append(f"{condition}={score}")
+    expected.append("")
+    expected = "\n".join(expected)
     run = runner(command=["bash"], inp=script)
     assert run.success
     assert run.err == ""
@@ -206,15 +204,15 @@ def test_score_values(runner, yadm, default, arch, system, distro, cla, host, us
 def test_extensions(runner, yadm, ext):
     """Verify extensions do not effect scores"""
     local_user = "testuser"
-    filename = f"filename##u.{local_user}"
+    condition = f"u.{local_user}"
     if ext:
-        filename += f",{ext}.xyz"
+        condition += f",{ext}.xyz"
     expected = ""
     script = f"""
         YADM_TEST=1 source {yadm}
         score=0
         local_user={local_user}
-        score_file "{filename}"
+        score_file "source" "target" "{condition}"
         echo "$score"
     """
     expected = f'{1000 + CONDITION["user"]["modifier"]}\n'
@@ -232,15 +230,15 @@ def test_score_values_templates(runner, yadm):
     local_distro = "testdistro"
     local_host = "testhost"
     local_user = "testuser"
-    filenames = {"filename##": 0}
+    conditions = {"": 0}
 
-    for filename in list(filenames):
+    for condition in list(conditions):
         for label in TEMPLATE_LABELS:
-            newfile = filename
-            if not newfile.endswith("##"):
-                newfile += ","
-            newfile += ".".join([label, "testtemplate"])
-            filenames[newfile] = calculate_score(newfile)
+            newcond = condition
+            if newcond:
+                newcond += ","
+            newcond += ".".join([label, "testtemplate"])
+            conditions[newcond] = calculate_score(newcond)
 
     script = f"""
         YADM_TEST=1 source {yadm}
@@ -252,15 +250,15 @@ def test_score_values_templates(runner, yadm):
         local_host={local_host}
         local_user={local_user}
     """
-    expected = ""
-    for filename, score in filenames.items():
+    expected = []
+    for condition, score in conditions.items():
         script += f"""
-            score_file "{filename}" "dest"
-            echo "{filename}"
-            echo "$score"
+            score_file "source" "target" "{condition}"
+            echo "{condition}=$score"
         """
-        expected += filename + "\n"
-        expected += str(score) + "\n"
+        expected.append(f"{condition}={score}")
+    expected.append("")
+    expected = "\n".join(expected)
     run = runner(command=["bash"], inp=script)
     assert run.success
     assert run.err == ""
@@ -281,7 +279,7 @@ def test_template_recording(runner, yadm, processor_generated):
         YADM_TEST=1 source {yadm}
         function record_score() {{ [ -n "$4" ] && echo "template recorded"; }}
         {mock}
-        score_file "testfile##template.kind"
+        score_file "source" "target" "template.kind"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success
@@ -293,13 +291,13 @@ def test_underscores_and_upper_case_in_distro_and_family(runner, yadm):
     """Test replacing spaces with underscores and lowering case in distro / distro_family"""
     local_distro = "test distro"
     local_distro_family = "test family"
-    filenames = {
-        "filename##distro.Test Distro": 1004,
-        "filename##distro.test-distro": 0,
-        "filename##distro.test_distro": 1004,
-        "filename##distro_family.test FAMILY": 1008,
-        "filename##distro_family.test-family": 0,
-        "filename##distro_family.test_family": 1008,
+    conditions = {
+        "distro.Test Distro": 1004,
+        "distro.test-distro": 0,
+        "distro.test_distro": 1004,
+        "distro_family.test FAMILY": 1008,
+        "distro_family.test-family": 0,
+        "distro_family.test_family": 1008,
     }
 
     script = f"""
@@ -308,15 +306,15 @@ def test_underscores_and_upper_case_in_distro_and_family(runner, yadm):
         local_distro="{local_distro}"
         local_distro_family="{local_distro_family}"
     """
-    expected = ""
-    for filename, score in filenames.items():
+    expected = []
+    for condition, score in conditions.items():
         script += f"""
-            score_file "{filename}"
-            echo "{filename}"
-            echo "$score"
+            score_file "source" "target" "{condition}"
+            echo "{condition}=$score"
         """
-        expected += filename + "\n"
-        expected += str(score) + "\n"
+        expected.append(f"{condition}={score}")
+    expected.append("")
+    expected = "\n".join(expected)
     run = runner(command=["bash"], inp=script)
     assert run.success
     assert run.err == ""
@@ -332,17 +330,17 @@ def test_negative_class_condition(runner, yadm):
 
         # 0
         score=0
-        score_file "filename##~class.testclass" "dest"
+        score_file "source" "target" "~class.testclass"
         echo "score: $score"
 
         # 16
         score=0
-        score_file "filename##~class.badclass" "dest"
+        score_file "source" "target" "~class.badclass"
         echo "score2: $score"
 
         # 16
         score=0
-        score_file "filename##~c.badclass" "dest"
+        score_file "source" "target" "~c.badclass"
         echo "score3: $score"
     """
     run = runner(command=["bash"], inp=script)
@@ -363,27 +361,27 @@ def test_negative_combined_conditions(runner, yadm):
 
         # (0) + (0) = 0
         score=0
-        score_file "filename##~class.testclass,~distro.testdistro" "dest"
+        score_file "source" "target" "~class.testclass,~distro.testdistro"
         echo "score: $score"
 
         # (1000 + 16) + (1000 + 4) = 2020
         score=0
-        score_file "filename##class.testclass,distro.testdistro" "dest"
+        score_file "source" "target" "class.testclass,distro.testdistro"
         echo "score2: $score"
 
         # 0 (negated class condition)
         score=0
-        score_file "filename##~class.badclass,~distro.testdistro" "dest"
+        score_file "source" "target" "~class.badclass,~distro.testdistro"
         echo "score3: $score"
 
         # (1000 + 16) + (4) = 1020
         score=0
-        score_file "filename##class.testclass,~distro.baddistro" "dest"
+        score_file "source" "target" "class.testclass,~distro.baddistro"
         echo "score4: $score"
 
         # (1000 + 16) + (16) = 1032
         score=0
-        score_file "filename##class.testclass,~class.badclass" "dest"
+        score_file "source" "target" "class.testclass,~class.badclass"
         echo "score5: $score"
     """
     run = runner(command=["bash"], inp=script)

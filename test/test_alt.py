@@ -40,15 +40,15 @@ def test_alt_source(runner, paths, tracked, encrypt, exclude, yadm_alt):
         source_file_content = link_path + "##default"
         source_file = basepath.join(source_file_content)
         link_file = paths.work.join(link_path)
+        if link_path == utils.ALT_DIR:
+            source_file = source_file.join(utils.CONTAINED)
+            link_file = link_file.join(utils.CONTAINED)
         if tracked or (encrypt and not exclude):
             assert link_file.islink()
             target = py.path.local(os.path.realpath(link_file))
-            if target.isfile():
-                assert link_file.read() == source_file_content
-                assert str(source_file) in linked
-            else:
-                assert link_file.join(utils.CONTAINED).read() == source_file_content
-                assert str(source_file) in linked
+            assert target.isfile()
+            assert link_file.read() == source_file_content
+            assert str(source_file) in linked
         else:
             assert not link_file.exists()
             assert str(source_file) not in linked
@@ -73,6 +73,9 @@ def test_relative_link(runner, paths, yadm_alt):
         source_file_content = link_path + "##default"
         source_file = basepath.join(source_file_content)
         link_file = paths.work.join(link_path)
+        if link_path == utils.ALT_DIR:
+            source_file = source_file.join(utils.CONTAINED)
+            link_file = link_file.join(utils.CONTAINED)
         link = link_file.readlink()
         relpath = os.path.relpath(source_file, start=os.path.dirname(link_file))
         assert link == relpath
@@ -128,15 +131,17 @@ def test_alt_conditions(runner, paths, tst_arch, tst_sys, tst_distro, tst_distro
     linked = utils.parse_alt_output(run.out)
 
     for link_path in TEST_PATHS:
-        source_file = link_path + suffix
-        assert paths.work.join(link_path).islink()
-        target = py.path.local(os.path.realpath(paths.work.join(link_path)))
-        if target.isfile():
-            assert paths.work.join(link_path).read() == source_file
-            assert str(paths.work.join(source_file)) in linked
-        else:
-            assert paths.work.join(link_path).join(utils.CONTAINED).read() == source_file
-            assert str(paths.work.join(source_file)) in linked
+        source_file_content = link_path + suffix
+        source_file = paths.work.join(source_file_content)
+        link_file = paths.work.join(link_path)
+        if link_path == utils.ALT_DIR:
+            source_file = source_file.join(utils.CONTAINED)
+            link_file = link_file.join(utils.CONTAINED)
+        assert link_file.islink()
+        target = py.path.local(os.path.realpath(link_file))
+        assert target.isfile()
+        assert link_file.read() == source_file_content
+        assert str(source_file) in linked
 
 
 @pytest.mark.usefixtures("ds1_copy")
@@ -156,6 +161,7 @@ def test_alt_templates(runner, paths, kind, label):
     suffix = f"##{label}.{kind}"
     if kind is None:
         suffix = f"##{label}"
+
     utils.create_alt_files(paths, suffix)
     run = runner([paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "alt"])
     assert run.success
@@ -163,11 +169,15 @@ def test_alt_templates(runner, paths, kind, label):
     created = utils.parse_alt_output(run.out, linked=False)
 
     for created_path in TEST_PATHS:
-        if created_path != utils.ALT_DIR:
-            source_file = created_path + suffix
-            assert paths.work.join(created_path).isfile()
-            assert paths.work.join(created_path).read().strip() == source_file
-            assert str(paths.work.join(source_file)) in created
+        source_file_content = created_path + suffix
+        source_file = paths.work.join(source_file_content)
+        created_file = paths.work.join(created_path)
+        if created_path == utils.ALT_DIR:
+            source_file = source_file.join(utils.CONTAINED)
+            created_file = created_file.join(utils.CONTAINED)
+        assert created_file.isfile()
+        assert created_file.read().strip() == source_file_content
+        assert str(source_file) in created
 
 
 @pytest.mark.usefixtures("ds1_copy")
@@ -201,20 +211,22 @@ def test_auto_alt(runner, yadm_cmd, paths, autoalt):
     linked = utils.parse_alt_output(run.out)
 
     for link_path in TEST_PATHS:
-        source_file = link_path + "##default"
+        source_file_content = link_path + "##default"
+        source_file = paths.work.join(source_file_content)
+        link_file = paths.work.join(link_path)
+        if link_path == utils.ALT_DIR:
+            source_file = source_file.join(utils.CONTAINED)
+            link_file = link_file.join(utils.CONTAINED)
+
         if autoalt == "false":
-            assert not paths.work.join(link_path).exists()
+            assert not link_file.exists()
         else:
-            assert paths.work.join(link_path).islink()
-            target = py.path.local(os.path.realpath(paths.work.join(link_path)))
-            if target.isfile():
-                assert paths.work.join(link_path).read() == source_file
-                # no linking output when run via auto-alt
-                assert str(paths.work.join(source_file)) not in linked
-            else:
-                assert paths.work.join(link_path).join(utils.CONTAINED).read() == source_file
-                # no linking output when run via auto-alt
-                assert str(paths.work.join(source_file)) not in linked
+            assert link_file.islink()
+            target = py.path.local(os.path.realpath(link_file))
+            assert target.isfile()
+            assert link_file.read() == source_file_content
+            # no linking output when run via auto-alt
+            assert str(source_file) not in linked
 
 
 @pytest.mark.usefixtures("ds1_copy")
@@ -236,6 +248,8 @@ def test_alt_exclude(runner, yadm_cmd, paths, autoexclude):
     status = run.out.split("\0")
 
     for link_path in TEST_PATHS:
+        if link_path == utils.ALT_DIR:
+            link_path = f"{link_path}/{utils.CONTAINED}"
         flags = "??" if autoexclude == "false" else "!!"
         assert f"{flags} {link_path}" in status
 
@@ -262,16 +276,18 @@ def test_stale_link_removal(runner, yadm_cmd, paths):
     linked = utils.parse_alt_output(run.out)
 
     # assert the proper linking has occurred
-    for stale_path in TEST_PATHS:
-        source_file = stale_path + "##class." + tst_class
-        assert paths.work.join(stale_path).islink()
-        target = py.path.local(os.path.realpath(paths.work.join(stale_path)))
-        if target.isfile():
-            assert paths.work.join(stale_path).read() == source_file
-            assert str(paths.work.join(source_file)) in linked
-        else:
-            assert paths.work.join(stale_path).join(utils.CONTAINED).read() == source_file
-            assert str(paths.work.join(source_file)) in linked
+    for link_path in TEST_PATHS:
+        source_file_content = link_path + f"##class.{tst_class}"
+        source_file = paths.work.join(source_file_content)
+        link_file = paths.work.join(link_path)
+        if link_path == utils.ALT_DIR:
+            source_file = source_file.join(utils.CONTAINED)
+            link_file = link_file.join(utils.CONTAINED)
+        assert link_file.islink()
+        target = py.path.local(os.path.realpath(link_file))
+        assert target.isfile()
+        assert link_file.read() == source_file_content
+        assert str(source_file) in linked
 
     # change the class so there are no valid alternates
     utils.set_local(paths, "class", "changedclass")
@@ -284,9 +300,53 @@ def test_stale_link_removal(runner, yadm_cmd, paths):
 
     # assert the linking is removed
     for stale_path in TEST_PATHS:
-        source_file = stale_path + "##class." + tst_class
-        assert not paths.work.join(stale_path).exists()
-        assert str(paths.work.join(source_file)) not in linked
+        source_file_content = stale_path + f"##class.{tst_class}"
+        source_file = paths.work.join(source_file_content)
+        stale_file = paths.work.join(stale_path)
+        if stale_path == utils.ALT_DIR:
+            source_file = source_file.join(utils.CONTAINED)
+            stale_file = stale_file.join(utils.CONTAINED)
+        assert not stale_file.exists()
+        assert str(source_file) not in linked
+
+
+@pytest.mark.usefixtures("ds1_copy")
+def test_legacy_dir_link_removal(runner, yadm_cmd, paths):
+    """Legacy link to alternative dir is removed
+
+    This test ensures that a legacy dir alternative (i.e. symlink to the dir
+    itself) is converted to indiividual links.
+    """
+
+    utils.create_alt_files(paths, "##default")
+
+    # Create legacy link
+    link_dir = paths.work.join(utils.ALT_DIR)
+    link_dir.mksymlinkto(link_dir.basename + "##default")
+    assert link_dir.islink()
+
+    # run alt to trigger linking
+    run = runner(yadm_cmd("alt"))
+    assert run.success
+    assert run.err == ""
+    linked = utils.parse_alt_output(run.out)
+
+    # assert legacy link is removed
+    assert not link_dir.islink()
+
+    # assert the proper linking has occurred
+    for link_path in TEST_PATHS:
+        source_file_content = link_path + "##default"
+        source_file = paths.work.join(source_file_content)
+        link_file = paths.work.join(link_path)
+        if link_path == utils.ALT_DIR:
+            source_file = source_file.join(utils.CONTAINED)
+            link_file = link_file.join(utils.CONTAINED)
+        assert link_file.islink()
+        target = py.path.local(os.path.realpath(link_file))
+        assert target.isfile()
+        assert link_file.read() == source_file_content
+        assert str(source_file) in linked
 
 
 @pytest.mark.usefixtures("ds1_repo_copy")

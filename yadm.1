@@ -616,8 +616,16 @@ Subsystem for Linux, where the os is reported as WSL, the link will be:
 If no "##default" version exists and no files have valid conditions, then no
 link will be created.
 
-Links are also created for directories named this way, as long as they have at
-least one yadm managed file within them.
+Conditions can also be used on directories and will then apply on all files
+within the directory. The following files:
+
+  - $HOME/path/example.txt##os.Linux
+  - $HOME/path/subdir/other.txt##os.Linux
+
+Would give the same result as:
+
+  - $HOME/path##os.Linux/example.txt
+  - $HOME/path##os.Linux/subdir/other.txt
 
 yadm will automatically create these links by default. This can be disabled
 using the
