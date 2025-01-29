@@ -199,3 +199,32 @@ Configuring Git this way includes `.gitconfig.local` in the standard
 `.gitconfig`. yadm will automatically link the correct version based on the
 operating system. The bulk of your configurations can go in a single file, and
 you just put the exceptions in OS-specific files.
+
+## Submodule alternates
+
+Git submodules can be conditionally enabled using a [conditional git-config
+include][git-config-includes] and the `submodule.active`
+[configuration][gitsubodules-active].
+
+1. Add the submodule as usual: `yadm submodule add <url> <name>`
+2. Add the following to `$HOME/.gitconfig` to include a config only for the
+   specific repository:
+
+    ```ini
+    [includeIf "gitdir:~/.local/share/yadm/repo.git"]
+        path = .gitconfig.submodules
+    ```
+3. Set up `.gitconfig.submodules` to be an alternate or template file that
+   e.g. contains this on the system where you don't want the submodule checked
+   out:
+
+    ```ini
+    [submodule]
+        active = *
+        active = :!<name>
+    ```
+4. Run `yadm submodule update` from the [bootstrap](bootstrap) program to check
+   out all active submodules.
+
+[git-config-includes]: https://git-scm.com/docs/git-config#_conditional_includes
+[gitsubodules-active]: https://git-scm.com/docs/gitsubmodules#_active_submodules
