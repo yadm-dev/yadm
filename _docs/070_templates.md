@@ -100,9 +100,13 @@ blocks must start with `{% if yadm.variable == "value" %}` and end with
 `{% endif %}`. An alternative block can also be specified using the directive
 `{% else %}`. These directives must appear on lines by themselves. They may not
 appear on the same line. The "if" directive only supports testing a single
-variable, and there is no "elif" directive as there is in Jinja.  <br><br> If
-multiple classes are defined, `yadm.class=="someclass"` will be true if *any*
-of the defined classes are "someclass".  <br><br> Here is an example.
+variable, and there is no "elif" directive as there is in Jinja. Comparisions
+are done case-insensitive.
+<br><br>
+If multiple classes are defined, `yadm.class=="someclass"` will be true if *any*
+of the defined classes are "someclass".
+<br><br>
+Here is an example.
 
 ```jinja
 {% if yadm.os == "Darwin" %}
