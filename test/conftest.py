@@ -9,7 +9,6 @@ import pwd
 import shutil
 from subprocess import PIPE, Popen
 
-import py
 import pytest
 
 
@@ -26,37 +25,37 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="session")
 def shellcheck_version():
     """Version of shellcheck supported"""
-    return "0.9.0"
+    return "0.10.0"
 
 
 @pytest.fixture(scope="session")
 def pylint_version():
     """Version of pylint supported"""
-    return "2.17.0"
+    return "3.3.1"
 
 
 @pytest.fixture(scope="session")
 def isort_version():
     """Version of isort supported"""
-    return "5.12.0"
+    return "5.13.2"
 
 
 @pytest.fixture(scope="session")
 def flake8_version():
     """Version of flake8 supported"""
-    return "6.0.0"
+    return "7.1.1"
 
 
 @pytest.fixture(scope="session")
 def black_version():
     """Version of black supported"""
-    return "23.1.0"
+    return "24.10.0"
 
 
 @pytest.fixture(scope="session")
 def yamllint_version():
     """Version of yamllint supported"""
-    return "1.30.0"
+    return "1.35.1"
 
 
 @pytest.fixture(scope="session")
@@ -82,19 +81,31 @@ def tst_distro(runner):
 
 
 @pytest.fixture(scope="session")
-def tst_distro_family(runner):
+def tst_distro_family():
     """Test session's distro_family"""
     family = ""
     with contextlib.suppress(Exception):
-        run = runner(command=["grep", "-oP", r"ID_LIKE=\K.+", "/etc/os-release"], report=False)
-        family = run.out.strip()
-    return family
+        with open("/etc/os-release", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("ID_LIKE="):
+                    family = line[8:]
+                    break
+                if line.startswith("ID="):
+                    family = line[3:]
+                    # No break, only used as fallback in case ID_LIKE isn't found
+    return family.replace('"', "").rstrip()
 
 
 @pytest.fixture(scope="session")
 def tst_sys():
     """Test session's uname value"""
-    return platform.system()
+    system = platform.system()
+    if system == "Linux":
+        # Additional check for WSL
+        with open("/proc/version", encoding="utf-8") as f:
+            if "icrosoft" in f.read():
+                system = "WSL"
+    return system
 
 
 @pytest.fixture(scope="session")
@@ -140,6 +151,8 @@ def supported_configs():
     return [
         "local.arch",
         "local.class",
+        "local.distro",
+        "local.distro-family",
         "local.hostname",
         "local.os",
         "local.user",
@@ -246,7 +259,7 @@ class Runner:
         if not expect:
             return
         cmdline = " ".join([f'"{w}"' for w in self.command])
-        expect_script = f"set timeout 2\nspawn {cmdline}\n"
+        expect_script = f"set timeout 5\nspawn {cmdline}\n"
         for question, answer in expect:
             expect_script += "expect {\n" f'"{question}" {{send "{answer}\\r"}}\n' "timeout {close;exit 128}\n" "}\n"
         expect_script += "expect eof\n" "foreach {pid spawnid os_error_flag value} [wait] break\n" "exit $value"
@@ -575,17 +588,21 @@ def ds1(ds1_work_copy, paths, ds1_dset):
 def gnupg(tmpdir_factory, runner):
     """Location of GNUPGHOME"""
 
-    def register_gpg_password(password):
-        """Publish a new GPG mock password"""
-        py.path.local("/tmp/mock-password").write(password)
-
     home = tmpdir_factory.mktemp("gnupghome")
     home.chmod(0o700)
     conf = home.join("gpg.conf")
     conf.write("no-secmem-warning\n")
     conf.chmod(0o600)
     agentconf = home.join("gpg-agent.conf")
-    agentconf.write(f'pinentry-program {os.path.abspath("test/pinentry-mock")}\n' "max-cache-ttl 0\n")
+    agentconf.write(
+        f"""\
+pinentry-program {os.path.abspath("test/pinentry-mock")}
+max-cache-ttl 0
+browser-socket none
+extra-socket none
+disable-scdaemon
+"""
+    )
     agentconf.chmod(0o600)
     data = collections.namedtuple("GNUPG", ["home", "pw"])
     env = os.environ.copy()
@@ -594,4 +611,12 @@ def gnupg(tmpdir_factory, runner):
     # this pre-populates std files in the GNUPGHOME
     runner(["gpg", "-k"], env=env)
 
-    return data(home, register_gpg_password)
+    def register_gpg_password(password):
+        """Publish a new GPG mock password and flush cached passwords"""
+        home.join("mock-password").write(password)
+        runner(["gpgconf", "--reload", "gpg-agent"], env=env)
+
+    yield data(home, register_gpg_password)
+
+    runner(["gpgconf", "--kill", "gpg-agent"], env=env)
+    runner(["gpgconf", "--remove-socketdir", "gpg-agent"], env=env)

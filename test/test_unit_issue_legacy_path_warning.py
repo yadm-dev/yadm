@@ -1,4 +1,5 @@
 """Unit tests: issue_legacy_path_warning"""
+
 import pytest
 
 

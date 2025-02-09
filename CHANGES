@@ -1,3 +1,18 @@
+3.4.0
+  * Improve and harden alt file regeneration (#466)
+  * Fix "yadm config" in fish completion (#491)
+  * Fix "yadm clone" when not run in "$YADM_WORK" (#513)
+  * Output the actual paths in help message (#376)
+  * Verify all alt conditions for templates (#478)
+  * Ignore case in alt and default template conditions (#455, #456)
+  * Fall back to ID for distro family if ID_LIKE is not available (#494)
+  * Support overriding distro and distro family (#430)
+  * Improve support for Bash 3 (the default version on macOS)
+  * Make "yadm clone --recursive" work as expected (#517)
+  * Don't include files multiple times in archive (#125)
+  * Document YADM_HOOK_DATA and YADM_HOOK_DIR env variables (#343)
+  * Support alt dirs with deeply nested tracked files (#495)
+
 3.3.0
   * Support nested ifs in default template (#436)
   * Support include and ifs in default template includes (#406)

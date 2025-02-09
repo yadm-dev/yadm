@@ -1,4 +1,5 @@
 """Unit tests: query_distro"""
+
 import pytest
 
 

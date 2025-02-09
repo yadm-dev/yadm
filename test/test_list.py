@@ -20,7 +20,8 @@ def test_list(runner, yadm_cmd, paths, ds1, location):
         run_dir = paths.work
     elif location == "outside":
         run_dir = paths.work.join("..")
-    elif location == "subdir":
+    else:
+        assert location == "subdir"
         # first directory with tracked data
         run_dir = paths.work.join(ds1.tracked_dirs[0])
     with run_dir.as_cwd():

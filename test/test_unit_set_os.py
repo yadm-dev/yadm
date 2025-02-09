@@ -36,5 +36,5 @@ def test_set_operating_system(runner, paths, tst_sys, proc_value, expected_os):
     assert run.success
     assert run.err == ""
     if expected_os == "uname":
-        expected_os = tst_sys
+        expected_os = tst_sys if tst_sys != "WSL" else "Linux"
     assert run.out.rstrip() == expected_os

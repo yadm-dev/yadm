@@ -1,5 +1,5 @@
 PYTESTS = $(wildcard test/test_*.py)
-IMAGE = docker.io/yadm/testbed:2023-07-12
+IMAGE = docker.io/yadm/testbed:2024-11-11
 OCI = docker
 
 .PHONY: all
@@ -176,7 +176,7 @@ man-ps:
 	@groff -man -Tps ./yadm.1 > yadm.ps
 
 yadm.md: yadm.1
-	@groff -man -Tutf8 -Z ./yadm.1 | grotty -c | col -bx | sed 's/^[A-Z]/## &/g' | sed '/yadm(1)/d' > yadm.md
+	@groff -man -Tutf8 -Z ./yadm.1 | grotty -c | col -bx | sed 's/^[A-Z]/## &/g' | sed '/YADM(1)/d' > yadm.md
 
 .PHONY: contrib
 contrib: SHELL = /bin/bash

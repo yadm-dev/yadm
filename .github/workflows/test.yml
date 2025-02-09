@@ -1,13 +1,129 @@
 ---
 name: Tests
+
 on:  # yamllint disable-line rule:truthy
   - push
   - pull_request
   - workflow_dispatch
+
+env:
+  SC_VER: "0.10.0"
+  ESH_VER: "0.3.2"
+
 jobs:
   Tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-20.04
+          - ubuntu-24.04
+          - macos-13
+          - macos-15
+          - windows-2022
+
+    defaults:
+      run:
+        shell: bash
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Tests
-        run: make test
+      - uses: actions/checkout@v4
+
+      - uses: Vampire/setup-wsl@v4
+        if: ${{ runner.os == 'Windows' }}
+
+      - name: Install dependencies on Linux
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            expect \
+            ${{ matrix.os != 'ubuntu-20.04' && 'j2cli' || '' }}
+
+      - name: Install dependencies on macOS
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          command -v expect || brew install expect
+
+      - name: Install dependencies on Windows (WSL)
+        if: ${{ runner.os == 'Windows' }}
+        shell: wsl-bash {0}
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            dos2unix \
+            expect \
+            gettext-base \
+            git \
+            gnupg \
+            j2cli \
+            lsb-release \
+            man \
+            python3-pip
+
+      - name: Prepare tools directory
+        run: |
+          mkdir "${{ runner.temp }}/tools"
+          echo "${{ runner.temp }}/tools" >> "${{ github.path }}"
+
+      - name: Install shellcheck
+        run: |
+          cd "${{ runner.temp }}"
+
+          OS=${{ runner.os == 'macOS' && 'darwin' || 'linux' }}
+          ARCH=${{ runner.arch == 'ARM64' && 'aarch64' || 'x86_64' }}
+
+          BASE_URL="https://github.com/koalaman/shellcheck/releases/download"
+          SC="v$SC_VER/shellcheck-v$SC_VER.$OS.$ARCH.tar.xz"
+
+          curl -L "$BASE_URL/$SC" | tar Jx shellcheck-v$SC_VER/shellcheck
+          mv shellcheck-v$SC_VER/shellcheck tools
+
+      - name: Install esh
+        run: |
+          cd "${{ runner.temp }}/tools"
+
+          BASE_URL="https://github.com/jirutka/esh/raw/refs/tags"
+          curl -L -o esh "$BASE_URL/v$ESH_VER/esh"
+          chmod +x esh
+
+      - name: Add old yadm versions  # to test upgrades
+        run: |
+          for version in 1.12.0 2.5.0; do
+            git fetch origin $version:refs/tags/$version
+            git cat-file blob $version:yadm \
+              > "${{ runner.temp }}/tools/yadm-$version"
+            chmod +x "${{ runner.temp }}/tools/yadm-$version"
+          done
+
+      - name: Set up Python 3.11
+        if: ${{ runner.os == 'macOS' || matrix.os == 'ubuntu-20.04' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies and run tests (Linux/macOS)
+        if: ${{ runner.os != 'Windows' }}
+        run: |
+          git config --global user.email test@yadm.io
+          git config --global user.name "Yadm Test"
+
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r test/requirements.txt
+          pytest -v --color=yes --basetemp="${{ runner.temp }}/pytest"
+
+      - name: Install dependencies and run tests (WSL)
+        if: ${{ runner.os == 'Windows' }}
+        shell: wsl-bash {0}
+        run: |
+          git config --global user.email test@yadm.io
+          git config --global user.name "Yadm Test"
+          git config --global protocol.file.allow always
+
+          dos2unix yadm.1 .github/workflows/*.yml test/pinentry-mock
+          chmod +x test/pinentry-mock
+
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r test/requirements.txt
+          pytest -v --color=yes

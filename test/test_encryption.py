@@ -2,7 +2,6 @@
 
 import os
 import shlex
-import time
 
 import pytest
 
@@ -219,7 +218,6 @@ def test_symmetric_decrypt(runner, yadm_cmd, paths, decrypt_targets, gnupg, doli
 
     if bad_phrase:
         gnupg.pw("")
-        time.sleep(1)  # allow gpg-agent cache to expire
     else:
         gnupg.pw(PASSPHRASE)
 

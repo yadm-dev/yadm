@@ -89,7 +89,9 @@ def run_test(runner, paths, args, expected_matches, cwd=None):
         XDG_DATA_HOME=
         HOME="{HOME}" set_yadm_dirs
         configure_paths
-        declare -p | grep -E '(YADM|GIT)_'
+        for var in "${{!YADM_@}}" "${{!GIT_@}}"; do
+          echo "$var=\\"${{!var}}\\""
+        done
     """
     run = runner(command=["bash"], inp=script, cwd=cwd)
     assert run.success

@@ -108,6 +108,39 @@ def test_clone(runner, paths, yadm_cmd, repo_config, ds1, good_remote, repo_exis
             assert old_repo.exists()
 
 
+@pytest.mark.usefixtures("remote_with_submodules")
+@pytest.mark.parametrize("action", ["recursive", "recurse", "specific"])
+def test_clone_submodules(runner, paths, yadm_cmd, repo_config, action):
+    """Test clone operation with submodules"""
+
+    # clear out the work path
+    paths.work.remove()
+    paths.work.mkdir()
+
+    env = {
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "protocol.file.allow",
+        "GIT_CONFIG_VALUE_0": "always",
+    }
+
+    args = ["clone", "-w", paths.work]
+    if action == "recursive":
+        args += ["--recursive"]
+    elif action == "recurse":
+        args += ["--recurse-submodules"]
+    elif action == "specific":
+        args += ["--recurse-submodules=a", "--recurse-submodules=d1/c"]
+    args += [f"file://{paths.remote}"]
+    run = runner(command=yadm_cmd(*args), env=env)
+    assert successful_clone(run, paths, repo_config)
+
+    for path in ("a", "b", "d1/c"):
+        if action != "specific" or path != "b":
+            assert paths.work.join(path).join(".git").exists()
+        else:
+            assert not paths.work.join(path).join(".git").exists()
+
+
 @pytest.mark.usefixtures("remote")
 @pytest.mark.parametrize(
     "bs_exists, bs_param, answer",
@@ -305,16 +338,38 @@ def remote(paths, ds1_repo_copy):
     """Function scoped remote (based on ds1)"""
     # pylint: disable=unused-argument
     # This is ignored because
-    # @pytest.mark.usefixtures('ds1_remote_copy')
+    # @pytest.mark.usefixtures('ds1_repo_copy')
     # cannot be applied to another fixture.
     paths.remote.remove()
     paths.repo.move(paths.remote)
 
 
-def test_no_repo(
-    runner,
-    yadm_cmd,
-):
+@pytest.fixture()
+def remote_with_submodules(tmpdir_factory, runner, paths, remote, ds1_work_copy):
+    """Function scoped remote with submodules (based on ds1)"""
+    # pylint: disable=unused-argument
+    # This is ignored because
+    # @pytest.mark.usefixtures('remote', 'ds1_work_copy')
+    # cannot be applied to another fixture.
+    submodule = tmpdir_factory.mktemp("submodule")
+    paths.remote.copy(submodule)
+
+    env = os.environ.copy()
+    env["GIT_DIR"] = str(paths.remote)
+
+    for path in ("a", "b", "d1/c"):
+        run = runner(
+            ["git", "-C", paths.work, "-c", "protocol.file.allow=always", "submodule", "add", submodule, path],
+            env=env,
+            report=False,
+        )
+        assert run.success
+
+    run = runner(["git", "-C", paths.work, "commit", "-m", '"Add submodules"'], env=env, report=False)
+    assert run.success
+
+
+def test_no_repo(runner, yadm_cmd):
     """Test cloning without specifying a repo"""
     run = runner(command=yadm_cmd("clone", "-f"))
     assert run.failure
@@ -326,3 +381,31 @@ def test_no_repo(
 def verify_head(paths, branch):
     """Assert the local repo has the correct head branch"""
     assert paths.repo.join("HEAD").read() == f"ref: refs/heads/{branch}\n"
+
+
+@pytest.mark.usefixtures("remote")
+def test_clone_subdirectory(runner, paths, yadm_cmd, repo_config):
+    """Test clone from sub-directory of YADM_WORK"""
+
+    # clear out the work path
+    paths.work.remove()
+    paths.work.mkdir()
+
+    # create sub-directory
+    subdir = paths.work.mkdir("subdir")
+
+    # determine remote url
+    remote_url = f"file://{paths.remote}"
+
+    # run the clone command
+    args = ["clone", "-w", paths.work, remote_url]
+    run = runner(command=yadm_cmd(*args), cwd=subdir)
+
+    # clone should succeed, and repo should be configured properly
+    assert successful_clone(run, paths, repo_config)
+
+    # ensure that no changes found as this is a clean dotfiles clone
+    run = runner(command=yadm_cmd("status", "-uno", "--porcelain"), cwd=subdir)
+    assert run.success
+    assert run.out == ""
+    assert run.err == ""

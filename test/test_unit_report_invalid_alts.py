@@ -1,4 +1,5 @@
 """Unit tests: report_invalid_alts"""
+
 import pytest
 
 

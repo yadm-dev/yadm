@@ -1,6 +1,7 @@
 #!/bin/sh
 # yadm - Yet Another Dotfiles Manager
 # Copyright (C) 2015-2024 Tim Byrne
+# Copyright (C) 2025 Erik Flodin
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +22,7 @@ if [ -z "$BASH_VERSION" ]; then
   [ "$YADM_TEST" != 1 ] && exec bash "$0" "$@"
 fi
 
-VERSION=3.3.0
+VERSION=3.4.0
 
 YADM_WORK="$HOME"
 YADM_DIR=
@@ -89,21 +90,21 @@ function main() {
     param="${param//\\/\\\\}"
     param="${param//$_tab/\\$_tab}"
     param="${param// /\\ }"
-    _fc+=( "$param" )
+    _fc+=("$param")
   done
   FULL_COMMAND="${_fc[*]}"
 
   # create the YADM_DIR & YADM_DATA if they doesn't exist yet
-  [ -d "$YADM_DIR" ]  || mkdir -p "$YADM_DIR"
+  [ -d "$YADM_DIR" ] || mkdir -p "$YADM_DIR"
   [ -d "$YADM_DATA" ] || mkdir -p "$YADM_DATA"
 
   # parse command line arguments
   local retval=0
   internal_commands="^(alt|bootstrap|clean|clone|config|decrypt|encrypt|enter|git-crypt|help|--help|init|introspect|list|perms|transcrypt|upgrade|version|--version)$"
-  if [ -z "$*" ] ; then
+  if [ -z "$*" ]; then
     # no argumnts will result in help()
     help
-  elif [[ "$1" =~ $internal_commands ]] ; then
+  elif [[ "$1" =~ $internal_commands ]]; then
     # for internal commands, process all of the arguments
     YADM_COMMAND="${1//-/_}"
     YADM_COMMAND="${YADM_COMMAND/__/}"
@@ -111,32 +112,32 @@ function main() {
     shift
 
     # commands listed below do not process any of the parameters
-    if [[ "$YADM_COMMAND" =~ ^(enter|git_crypt)$ ]] ; then
+    if [[ "$YADM_COMMAND" =~ ^(enter|git_crypt)$ ]]; then
       YADM_ARGS=("$@")
     else
-      while [[ $# -gt 0 ]] ; do
+      while [[ $# -gt 0 ]]; do
         key="$1"
         case $key in
           -a) # used by list()
             LIST_ALL="YES"
-          ;;
+            ;;
           -d) # used by all commands
             DEBUG="YES"
-          ;;
+            ;;
           -f) # used by init(), clone() and upgrade()
             FORCE="YES"
-          ;;
+            ;;
           -l) # used by decrypt()
             DO_LIST="YES"
             [[ "$YADM_COMMAND" =~ ^(clone|config)$ ]] && YADM_ARGS+=("$1")
-          ;;
+            ;;
           -w) # used by init() and clone()
             YADM_WORK="$(qualify_path "$2" "work tree")"
             shift
-          ;;
+            ;;
           *) # any unhandled arguments
             YADM_ARGS+=("$1")
-          ;;
+            ;;
         esac
         shift
       done
@@ -162,212 +163,196 @@ function main() {
 
 }
 
-
 # ****** Alternate Processing ******
 
 function score_file() {
-  src="$1"
-  tgt="${src%%##*}"
-  conditions="${src#*##}"
-
-  if [ "${tgt#"$YADM_ALT/"}" != "${tgt}" ]; then
-    tgt="${YADM_BASE}/${tgt#"$YADM_ALT/"}"
-  fi
+  local source="$1"
+  local target="$2"
+  local conditions="${source#*##}"
 
   score=0
-  IFS=',' read -ra fields <<< "$conditions"
+  local template_processor=""
+
+  IFS=',' read -ra fields <<<"$conditions"
   for field in "${fields[@]}"; do
-    label=${field%%.*}
-    value=${field#*.}
+    local label=${field%%.*}
+    local value=${field#*.}
     [ "$field" = "$label" ] && value="" # when .value is omitted
-    # extension isn't a condition and doesn't affect the score
-    if [[ "$label" =~ ^(e|extension)$ ]]; then
-      continue
-    fi
-    score=$((score + 1000))
-    # default condition
-    if [[ "$label" =~ ^(default)$ ]]; then
-      score=$((score + 0))
-    # variable conditions
-    elif [[ "$label" =~ ^(a|arch)$ ]]; then
-      if [ "$value" = "$local_arch" ]; then
-        score=$((score + 1))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(o|os)$ ]]; then
-      if [ "$value" = "$local_system" ]; then
-        score=$((score + 2))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(d|distro)$ ]]; then
-      if [ "${value/\ /_}" = "${local_distro/\ /_}" ]; then
-        score=$((score + 4))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(f|distro_family)$ ]]; then
-      if [ "${value/\ /_}" = "${local_distro_family/\ /_}" ]; then
-        score=$((score + 8))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(c|class)$ ]]; then
-      if in_list "$value" "${local_classes[@]}"; then
-        score=$((score + 16))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(h|hostname)$ ]]; then
-      if [ "$value" = "$local_host" ]; then
-        score=$((score + 32))
-      else
-        score=0
-        return
-      fi
-    elif [[ "$label" =~ ^(u|user)$ ]]; then
-      if [ "$value" = "$local_user" ]; then
-        score=$((score + 64))
-      else
-        score=0
-        return
-      fi
-    # templates
-    elif [[ "$label" =~ ^(t|template|yadm)$ ]]; then
-      score=0
-      cmd=$(choose_template_cmd "$value")
-      if [ -n "$cmd" ]; then
-        record_template "$tgt" "$cmd" "$src"
-      else
-        debug "No supported template processor for template $src"
-        [ -n "$loud" ] && echo "No supported template processor for template $src"
-      fi
-      return 0
-    # unsupported values
-    else
-      if [[ "${src##*/}" =~ .\#\#. ]]; then
-        INVALID_ALT+=("$src")
-      fi
+
+    shopt -s nocasematch
+    local -i delta=-1
+    case "$label" in
+      default)
+        delta=0
+        ;;
+      a | arch)
+        [[ "$value" = "$local_arch" ]] && delta=1
+        ;;
+      o | os)
+        [[ "$value" = "$local_system" ]] && delta=2
+        ;;
+      d | distro)
+        [[ "${value// /_}" = "${local_distro// /_}" ]] && delta=4
+        ;;
+      f | distro_family)
+        [[ "${value// /_}" = "${local_distro_family// /_}" ]] && delta=8
+        ;;
+      c | class)
+        in_list "$value" "${local_classes[@]}" && delta=16
+        ;;
+      h | hostname)
+        [[ "$value" = "$local_host" ]] && delta=32
+        ;;
+      u | user)
+        [[ "$value" = "$local_user" ]] && delta=64
+        ;;
+      e | extension)
+        # extension isn't a condition and doesn't affect the score
+        continue
+        ;;
+      t | template | yadm)
+        if [ -d "$source" ]; then
+          INVALID_ALT+=("$source")
+        else
+          template_processor=$(choose_template_processor "$value")
+          if [ -n "$template_processor" ]; then
+            delta=0
+          elif [ -n "$loud" ]; then
+            echo "No supported template processor for template $source"
+          else
+            debug "No supported template processor for template $source"
+          fi
+        fi
+        ;;
+      *)
+        INVALID_ALT+=("$source")
+        ;;
+    esac
+    shopt -u nocasematch
+
+    if ((delta < 0)); then
       score=0
       return
     fi
+    score=$((score + 1000 + delta))
   done
 
-  record_score "$score" "$tgt" "$src"
+  record_score "$score" "$target" "$source" "$template_processor"
 }
 
 function record_score() {
-  score="$1"
-  tgt="$2"
-  src="$3"
+  local score="$1"
+  local target="$2"
+  local source="$3"
+  local template_processor="$4"
 
   # record nothing if the score is zero
-  [ "$score" -eq 0 ] && return
+  [ "$score" -eq 0 ] && [ -z "$template_processor" ] && return
 
   # search for the index of this target, to see if we already are tracking it
-  index=-1
-  for search_index in "${!alt_targets[@]}"; do
-    if [ "${alt_targets[$search_index]}" = "$tgt" ]; then
-        index="$search_index"
-        break
+  local -i index=$((${#alt_targets[@]} - 1))
+  for (( ; index >= 0; --index)); do
+    if [ "${alt_targets[$index]}" = "$target" ]; then
+      break
     fi
   done
-  # if we don't find an existing index, create one by appending to the array
-  if [ "$index" -eq -1 ]; then
+
+  if [ $index -lt 0 ]; then
     # $YADM_CONFIG must be processed first, in case other templates lookup yadm configurations
-    if [ "$tgt" = "$YADM_CONFIG" ]; then
-        alt_targets=("$tgt" "${alt_targets[@]}")
-        alt_sources=("$src" "${alt_sources[@]}")
-        alt_scores=(0 "${alt_scores[@]}")
-        index=0
-        # increase the index of any existing alt_template_cmds
-        new_cmds=()
-        for cmd_index in "${!alt_template_cmds[@]}"; do
-            new_cmds[cmd_index+1]="${alt_template_cmds[$cmd_index]}"
-        done
-        alt_template_cmds=()
-        for cmd_index in "${!new_cmds[@]}"; do
-            alt_template_cmds[cmd_index]="${new_cmds[$cmd_index]}"
-        done
+    if [ "$target" = "$YADM_CONFIG" ]; then
+      alt_targets=("$target" "${alt_targets[@]}")
+
+      alt_sources=("$source" "${alt_sources[@]}")
+      alt_scores=("$score" "${alt_scores[@]}")
+      alt_template_processors=("$template_processor" "${alt_template_processors[@]}")
     else
-        alt_targets+=("$tgt")
-        # set index to the last index (newly created one)
-        for index in "${!alt_targets[@]}"; do :; done
-        # and set its initial score to zero
-        alt_scores[index]=0
-     fi
-  fi
+      alt_targets+=("$target")
 
-  # record nothing if a template command is registered for this file
-  [ "${alt_template_cmds[$index]+isset}" ] && return
-
-  # record higher scoring sources
-  if [ "$score" -gt "${alt_scores[$index]}" ]; then
-    alt_scores[index]="$score"
-    alt_sources[index]="$src"
-  fi
-
-}
-
-function record_template() {
-  tgt="$1"
-  cmd="$2"
-  src="$3"
-
-  # search for the index of this target, to see if we already are tracking it
-  index=-1
-  for search_index in "${!alt_targets[@]}"; do
-    if [ "${alt_targets[$search_index]}" = "$tgt" ]; then
-        index="$search_index"
-        break
+      alt_sources+=("$source")
+      alt_scores+=("$score")
+      alt_template_processors+=("$template_processor")
     fi
-  done
-  # if we don't find an existing index, create one by appending to the array
-  if [ "$index" -eq -1 ]; then
-    alt_targets+=("$tgt")
-    # set index to the last index (newly created one)
-    for index in "${!alt_targets[@]}"; do :; done
+    return
   fi
 
-  # record the template command, last one wins
-  alt_template_cmds[index]="$cmd"
-  alt_sources[index]="$src"
+  if [[ -n "${alt_template_processors[$index]}" ]]; then
+    if [[ -z "$template_processor" || "$score" -lt "${alt_scores[$index]}" ]]; then
+      # Not template, or template but lower score
+      return
+    fi
+  elif [[ -z "$template_processor" && "$score" -le "${alt_scores[$index]}" ]]; then
+    # Not template and too low score
+    return
+  fi
 
+  # Record new alt
+  alt_sources[index]="$source"
+  alt_scores[index]="$score"
+  alt_template_processors[index]="$template_processor"
 }
 
-function choose_template_cmd() {
-  kind="$1"
+function choose_template_processor() {
+  local kind="$1"
 
-  if [ "$kind" = "default" ] || [ "$kind" = "" ] && awk_available; then
-    echo "template_default"
-  elif [ "$kind" = "esh" ] && esh_available; then
-    echo "template_esh"
-  elif [ "$kind" = "j2cli" ] || [ "$kind" = "j2" ] && j2cli_available; then
-    echo "template_j2cli"
-  elif [ "$kind" = "envtpl" ] || [ "$kind" = "j2" ] && envtpl_available; then
-    echo "template_envtpl"
-  else
-    return # this "kind" of template is not supported
+  if [[ "${kind:-default}" = "default" ]]; then
+    awk_available && echo "default"
+  elif [[ "$kind" = "esh" ]]; then
+    esh_available && echo "esh"
+  elif [[ "$kind" = "j2cli" || "$kind" = "j2" ]] && j2cli_available; then
+    echo "j2cli"
+  elif [[ "$kind" = "envtpl" || "$kind" = "j2" ]] && envtpl_available; then
+    echo "envtpl"
   fi
 
 }
 
 # ****** Template Processors ******
 
+function template() {
+  local processor="$1"
+  local input="$2"
+  local output="$3"
+
+  local content
+  if ! content=$("template_$processor" "$input"); then
+    echo "Error: failed to process template '$input'" >&2
+    return
+  fi
+
+  if [ -r "$output" ] && [ "$content" = "$(<"$output")" ]; then
+    debug "Template output '$output' is unchanged"
+    return
+  fi
+
+  # If the output file already exists as read-only, change it to be writable.
+  # There are some environments in which a read-only file will prevent the move
+  # from being successful.
+  if [ ! -w "$output" ] && [ -e "$output" ]; then
+    chmod u+w "$output"
+  fi
+
+  if [ -n "$loud" ]; then
+    echo "Creating $output from template $input"
+  else
+    debug "Creating $output from template $input"
+  fi
+
+  local temp_file="${output}.$$.$RANDOM"
+  if cat >"$temp_file" <<<"$content" && mv -f "$temp_file" "$output"; then
+    copy_perms "$input" "$output"
+  else
+    echo "Error: failed to create template output '$output'"
+    rm -f "$temp_file"
+  fi
+}
+
 function template_default() {
-  input="$1"
-  output="$2"
-  temp_file="${output}.$$.$RANDOM"
+  local input="$1"
 
   # the explicit "space + tab" character class used below is used because not
   # all versions of awk seem to support the POSIX character classes [[:blank:]]
-  read -r -d '' awk_pgm << "EOF"
+  local awk_pgm
+  read -r -d '' awk_pgm <<"EOF"
 BEGIN {
   classes = ARGV[2]
   for (i = 3; i < ARGC; ++i) {
@@ -403,17 +388,17 @@ BEGIN {
         match($0, /[!=]=/)
         op = substr($0, RSTART, RLENGTH)
         match($0, /".*"/)
-        rhs = replace_vars(substr($0, RSTART + 1, RLENGTH - 2))
+        rhs = tolower(replace_vars(substr($0, RSTART + 1, RLENGTH - 2)))
 
         if (lhs == "yadm.class") {
           lhs = "not" rhs
           split(classes, cls_array, "\n")
           for (idx in cls_array) {
-            if (rhs == cls_array[idx]) { lhs = rhs; break }
+            if (rhs == tolower(cls_array[idx])) { lhs = rhs; break }
           }
         }
         else {
-          lhs = replace_vars("{{" lhs "}}")
+          lhs = tolower(replace_vars("{{" lhs "}}"))
         }
 
         if (op == "==") { skip[++level] = lhs != rhs }
@@ -488,84 +473,54 @@ EOF
     -v distro="$local_distro" \
     -v distro_family="$local_distro_family" \
     -v source="$input" \
-    -v source_dir="$(dirname "$input")" \
+    -v source_dir="$(builtin_dirname "$input")" \
     "$awk_pgm" \
-    "$input" "${local_classes[@]}" > "$temp_file" || rm -f "$temp_file"
-
-  move_file "$input" "$output" "$temp_file"
+    "$input" "${local_classes[@]}"
 }
 
 function template_j2cli() {
-  input="$1"
-  output="$2"
-  temp_file="${output}.$$.$RANDOM"
+  local input="$1"
 
-  YADM_CLASS="$local_class"   \
-  YADM_ARCH="$local_arch"     \
-  YADM_OS="$local_system"     \
-  YADM_HOSTNAME="$local_host" \
-  YADM_USER="$local_user"     \
-  YADM_DISTRO="$local_distro" \
-  YADM_DISTRO_FAMILY="$local_distro_family" \
-  YADM_SOURCE="$input"        \
-  YADM_CLASSES="$(join_string $'\n' "${local_classes[@]}")" \
-  "$J2CLI_PROGRAM" "$input" -o "$temp_file"
-
-  move_file "$input" "$output" "$temp_file"
+  YADM_CLASS="$local_class" \
+    YADM_ARCH="$local_arch" \
+    YADM_OS="$local_system" \
+    YADM_HOSTNAME="$local_host" \
+    YADM_USER="$local_user" \
+    YADM_DISTRO="$local_distro" \
+    YADM_DISTRO_FAMILY="$local_distro_family" \
+    YADM_SOURCE="$input" \
+    YADM_CLASSES="$(join_string $'\n' "${local_classes[@]}")" \
+    "$J2CLI_PROGRAM" "$input"
 }
 
 function template_envtpl() {
-  input="$1"
-  output="$2"
-  temp_file="${output}.$$.$RANDOM"
+  local input="$1"
 
-  YADM_CLASS="$local_class"   \
-  YADM_ARCH="$local_arch"     \
-  YADM_OS="$local_system"     \
-  YADM_HOSTNAME="$local_host" \
-  YADM_USER="$local_user"     \
-  YADM_DISTRO="$local_distro" \
-  YADM_DISTRO_FAMILY="$local_distro_family" \
-  YADM_SOURCE="$input"        \
-  YADM_CLASSES="$(join_string $'\n' "${local_classes[@]}")" \
-  "$ENVTPL_PROGRAM" --keep-template "$input" -o "$temp_file"
-
-  move_file "$input" "$output" "$temp_file"
+  YADM_CLASS="$local_class" \
+    YADM_ARCH="$local_arch" \
+    YADM_OS="$local_system" \
+    YADM_HOSTNAME="$local_host" \
+    YADM_USER="$local_user" \
+    YADM_DISTRO="$local_distro" \
+    YADM_DISTRO_FAMILY="$local_distro_family" \
+    YADM_SOURCE="$input" \
+    YADM_CLASSES="$(join_string $'\n' "${local_classes[@]}")" \
+    "$ENVTPL_PROGRAM" -o - --keep-template "$input"
 }
 
 function template_esh() {
-  input="$1"
-  output="$2"
-  temp_file="${output}.$$.$RANDOM"
+  local input="$1"
 
   YADM_CLASSES="$(join_string $'\n' "${local_classes[@]}")" \
-  "$ESH_PROGRAM" -o "$temp_file" "$input" \
-  YADM_CLASS="$local_class"   \
-  YADM_ARCH="$local_arch"     \
-  YADM_OS="$local_system"     \
-  YADM_HOSTNAME="$local_host" \
-  YADM_USER="$local_user"     \
-  YADM_DISTRO="$local_distro" \
-  YADM_DISTRO_FAMILY="$local_distro_family" \
-  YADM_SOURCE="$input"
-
-  move_file "$input" "$output" "$temp_file"
-}
-
-function move_file() {
-  local input=$1
-  local output=$2
-  local temp_file=$3
-
-  [ ! -f "$temp_file" ] && return
-
-  # if the output files already exists as read-only, change it to be writable.
-  # there are some environments in which a read-only file will prevent the move
-  # from being successful.
-  [[ -e "$output" && ! -w "$output" ]] && chmod u+w "$output"
-
-  mv -f "$temp_file" "$output"
-  copy_perms "$input" "$output"
+    "$ESH_PROGRAM" "$input" \
+    YADM_CLASS="$local_class" \
+    YADM_ARCH="$local_arch" \
+    YADM_OS="$local_system" \
+    YADM_HOSTNAME="$local_host" \
+    YADM_USER="$local_user" \
+    YADM_DISTRO="$local_distro" \
+    YADM_DISTRO_FAMILY="$local_distro_family" \
+    YADM_SOURCE="$input"
 }
 
 # ****** yadm Commands ******
@@ -599,29 +554,45 @@ function alt() {
   # determine all tracked files
   local tracked_files=()
   local IFS=$'\n'
-  for tracked_file in $("$GIT_PROGRAM" ls-files | LC_ALL=C sort); do
+  for tracked_file in $("$GIT_PROGRAM" ls-files -- '*##*'); do
     tracked_files+=("$tracked_file")
   done
 
-  # generate data for removing stale links
-  local possible_alts=()
-  local IFS=$'\n'
-  for possible_alt in "${tracked_files[@]}" "${ENCRYPT_INCLUDE_FILES[@]}"; do
-    if [[ $possible_alt =~ .\#\#. ]]; then
-      base_alt="${possible_alt%%##*}"
-      yadm_alt="${YADM_BASE}/${base_alt}"
-      if [ "${yadm_alt#"$YADM_ALT/"}" != "${yadm_alt}" ]; then
-        base_alt="${yadm_alt#"$YADM_ALT/"}"
-      fi
-      possible_alts+=("$YADM_BASE/${base_alt}")
+  local alt_targets=()
+  local alt_sources=()
+  local alt_scores=()
+  local alt_template_processors=()
+
+  # For removing stale links
+  local possible_alt_targets=()
+
+  local alt_source
+  for alt_source in "${tracked_files[@]}" "${ENCRYPT_INCLUDE_FILES[@]}"; do
+    local conditions="${alt_source#*##}"
+    if [ "$alt_source" = "$conditions" ]; then
+      continue
     fi
+
+    local target_base="${alt_source%%##*}"
+    alt_source="${YADM_BASE}/${target_base}##${conditions%%/*}"
+    local alt_target="${YADM_BASE}/${target_base}"
+    if [ "${alt_target#"$YADM_ALT/"}" != "$alt_target" ]; then
+      target_base="${alt_target#"$YADM_ALT/"}"
+    fi
+    alt_target="${YADM_BASE}/${target_base}"
+
+    if ! in_list "$alt_target" "${possible_alt_targets[@]}"; then
+      possible_alt_targets+=("$alt_target")
+    fi
+
+    score_file "$alt_source" "$alt_target"
   done
+
   local alt_linked=()
 
   alt_linking
   remove_stale_links
   report_invalid_alts
-
 }
 
 function report_invalid_alts() {
@@ -654,7 +625,7 @@ function report_invalid_alts() {
 ${path_list}
 ***********
 EOF
-    printf '%s\n' "$msg" >&2
+  printf '%s\n' "$msg" >&2
 }
 
 function remove_stale_links() {
@@ -662,7 +633,7 @@ function remove_stale_links() {
   # if a possible alt IS linked, but it's source is not part of alt_linked,
   # remove it.
   if readlink_available; then
-    for stale_candidate in "${possible_alts[@]}"; do
+    for stale_candidate in "${possible_alt_targets[@]}"; do
       if [ -L "$stale_candidate" ]; then
         src=$(readlink "$stale_candidate" 2>/dev/null)
         if [ -n "$src" ]; then
@@ -681,94 +652,83 @@ function set_local_alt_values() {
   local -a all_classes
   all_classes=$(config --get-all local.class)
   while IFS='' read -r class; do
-      local_classes+=("$class")
-      local_class="$class"
-  done <<< "$all_classes"
+    local_classes+=("$class")
+    local_class="$class"
+  done <<<"$all_classes"
 
   local_arch="$(config local.arch)"
-  if [ -z "$local_arch" ] ; then
+  if [[ -z "$local_arch" ]]; then
     local_arch=$(uname -m)
   fi
 
   local_system="$(config local.os)"
-  if [ -z "$local_system" ] ; then
+  if [[ -z "$local_system" ]]; then
     local_system="$OPERATING_SYSTEM"
   fi
 
   local_host="$(config local.hostname)"
-  if [ -z "$local_host" ] ; then
+  if [[ -z "$local_host" ]]; then
     local_host=$(uname -n)
     local_host=${local_host%%.*} # trim any domain from hostname
   fi
 
   local_user="$(config local.user)"
-  if [ -z "$local_user" ] ; then
+  if [[ -z "$local_user" ]]; then
     local_user=$(id -u -n)
   fi
 
-  local_distro="$(query_distro)"
-  local_distro_family="$(query_distro_family)"
+  local_distro="$(config local.distro)"
+  if [[ -z "$local_distro" ]]; then
+    local_distro="$(query_distro)"
+  fi
+
+  local_distro_family="$(config local.distro-family)"
+  if [[ -z "$local_distro_family" ]]; then
+    local_distro_family="$(query_distro_family)"
+  fi
 
 }
 
 function alt_linking() {
+  local -i index
+  for ((index = 0; index < ${#alt_targets[@]}; ++index)); do
+    local target="${alt_targets[$index]}"
+    local source="${alt_sources[$index]}"
+    local template_processor="${alt_template_processors[$index]}"
 
-  local alt_scores=()
-  local alt_targets=()
-  local alt_sources=()
-  local alt_template_cmds=()
+    if [[ -L "$target" ]]; then
+      rm -f "$target"
+    elif [[ -d "$target" ]]; then
+      echo "Skipping alt $source as $target is a directory"
+      continue
+    else
+      assert_parent "$target"
+    fi
 
-  for alt_path in $(for tracked in "${tracked_files[@]}"; do printf "%s\n" "$tracked" "${tracked%/*}"; done | LC_ALL=C sort -u) "${ENCRYPT_INCLUDE_FILES[@]}"; do
-    alt_path="$YADM_BASE/$alt_path"
-    if [[ "$alt_path" =~ .\#\#. ]]; then
-      if [ -e "$alt_path" ] ; then
-        score_file "$alt_path"
-      fi
+    if [[ -n "$template_processor" ]]; then
+      template "$template_processor" "$source" "$target"
+    elif [[ "$do_copy" -eq 1 ]]; then
+      debug "Copying $source to $target"
+      [[ -n "$loud" ]] && echo "Copying $source to $target"
+
+      cp -f "$source" "$target"
+    else
+      debug "Linking $source to $target"
+      [[ -n "$loud" ]] && echo "Linking $source to $target"
+
+      ln_relative "$source" "$target"
     fi
   done
-
-  for index in "${!alt_targets[@]}"; do
-    tgt="${alt_targets[$index]}"
-    src="${alt_sources[$index]}"
-    template_cmd="${alt_template_cmds[$index]}"
-    if [ -n "$template_cmd" ]; then
-      # a template is defined, process the template
-      debug "Creating $tgt from template $src"
-      [ -n "$loud" ] && echo "Creating $tgt from template $src"
-      # ensure the destination path exists
-      assert_parent "$tgt"
-      # remove any existing symlink before processing template
-      [ -L "$tgt" ] && rm -f "$tgt"
-      "$template_cmd" "$src" "$tgt"
-    elif [ -n "$src" ]; then
-      # a link source is defined, create symlink
-      debug "Linking $src to $tgt"
-      [ -n "$loud" ] && echo "Linking $src to $tgt"
-      # ensure the destination path exists
-      assert_parent "$tgt"
-      if [ "$do_copy" -eq 1 ]; then
-        # remove any existing symlink before copying
-        [ -L "$tgt" ] && rm -f "$tgt"
-        cp -f "$src" "$tgt"
-      else
-        ln_relative "$src" "$tgt"
-      fi
-    fi
-  done
-
 }
 
 function ln_relative() {
-  local full_source full_target target_dir
-  local full_source="$1"
-  local full_target="$2"
-  local target_dir="${full_target%/*}"
-  if [ "$target_dir" == "" ]; then
-    target_dir="/"
-  fi
+  local source="$1"
+  local target="$2"
+
   local rel_source
-  rel_source=$(relative_path "$target_dir" "$full_source")
-  ln -nfs "$rel_source" "$full_target"
+  rel_source=$(relative_path "$(builtin_dirname "$target")" "$source")
+
+  ln -fs "$rel_source" "$target"
   alt_linked+=("$rel_source")
 }
 
@@ -795,30 +755,37 @@ function clone() {
   DO_BOOTSTRAP=1
   local -a args
   local -i do_checkout=1
-  while [[ $# -gt 0 ]] ; do
+  local -a submodules
+  while [[ $# -gt 0 ]]; do
     case "$1" in
       --bootstrap) # force bootstrap, without prompt
         DO_BOOTSTRAP=2
-      ;;
+        ;;
       --no-bootstrap) # prevent bootstrap, without prompt
         DO_BOOTSTRAP=3
-      ;;
+        ;;
       --checkout)
         do_checkout=1
-      ;;
-      -n|--no-checkout)
+        ;;
+      -n | --no-checkout)
         do_checkout=0
-      ;;
-      --bare|--mirror|--recurse-submodules*|--recursive|--separate-git-dir=*)
+        ;;
+      --recursive | --recurse-submodules)
+        submodules+=(":/")
+        ;;
+      --recurse-submodules=*)
+        submodules+=(":/${1#*=}")
+        ;;
+      --bare | --mirror | --separate-git-dir=*)
         # ignore arguments without separate parameter
-      ;;
+        ;;
       --separate-git-dir)
         # ignore arguments with separate parameter
         shift
-      ;;
+        ;;
       *)
         args+=("$1")
-      ;;
+        ;;
     esac
     shift
   done
@@ -843,17 +810,17 @@ function clone() {
   # first clone without checkout
   debug "Doing an initial clone of the repository"
   (cd "$wc" &&
-       "$GIT_PROGRAM" -c core.sharedrepository=0600 clone --no-checkout \
-                      --separate-git-dir="$YADM_REPO" "${args[@]}" repo.git) || {
-      debug "Removing repo after failed clone"
-      rm -rf "$YADM_REPO" "$wc"
-      error_out "Unable to clone the repository"
+    "$GIT_PROGRAM" -c core.sharedrepository=0600 clone --no-checkout \
+      --separate-git-dir="$YADM_REPO" "${args[@]}" repo.git) || {
+    debug "Removing repo after failed clone"
+    rm -rf "$YADM_REPO" "$wc"
+    error_out "Unable to clone the repository"
   }
   configure_repo
   rm -rf "$wc"
 
   # then reset the index as the --no-checkout flag makes the index empty
-  "$GIT_PROGRAM" reset --quiet -- .
+  "$GIT_PROGRAM" reset --quiet -- ":/"
 
   if [ "$YADM_WORK" = "$HOME" ]; then
     debug "Determining if repo tracks private directories"
@@ -868,17 +835,21 @@ function clone() {
 
   # finally check out (unless instructed not to) all files that don't exist in $YADM_WORK
   if [[ $do_checkout -ne 0 ]]; then
-      [ -n "$DEBUG" ] && display_private_perms "pre-checkout"
+    [ -n "$DEBUG" ] && display_private_perms "pre-checkout"
 
-      cd_work "Clone" || return
+    cd_work "Clone" || return
 
-      "$GIT_PROGRAM" ls-files --deleted | while IFS= read -r file; do
-          "$GIT_PROGRAM" checkout -- ":/$file"
-      done
+    "$GIT_PROGRAM" ls-files --deleted | while IFS= read -r file; do
+      "$GIT_PROGRAM" checkout -- ":/$file"
+    done
 
-      if [ -n "$("$GIT_PROGRAM" ls-files --modified)" ]; then
-        local msg
-        IFS='' read -r -d '' msg <<EOF
+    if [ ${#submodules[@]} -gt 0 ]; then
+      "$GIT_PROGRAM" submodule update --init --recursive -- "${submodules[@]}"
+    fi
+
+    if [ -n "$("$GIT_PROGRAM" ls-files --modified)" ]; then
+      local msg
+      IFS='' read -r -d '' msg <<EOF
 **NOTE**
   Local files with content that differs from the ones just
   cloned were found in $YADM_WORK. They have been left
@@ -888,12 +859,12 @@ function clone() {
   If you know what you're doing, and want to overwrite the
   tracked files, consider 'yadm checkout "$YADM_WORK"'.
 EOF
-        printf '%s\n' "$msg"
-      fi
+      printf '%s\n' "$msg"
+    fi
 
-      [ -n "$DEBUG" ] && display_private_perms "post-checkout"
+    [ -n "$DEBUG" ] && display_private_perms "post-checkout"
 
-      CHANGES_POSSIBLE=1
+    CHANGES_POSSIBLE=1
   fi
 
 }
@@ -901,12 +872,12 @@ EOF
 function config() {
 
   use_repo_config=0
-  local_options="^local\.(class|arch|os|hostname|user)$"
+  local_options="^local\.(class|arch|os|hostname|user|distro|distro-family)$"
   for option in "$@"; do
     [[ "$option" =~ $local_options ]] && use_repo_config=1
   done
 
-  if [ -z "$*" ] ; then
+  if [ -z "$*" ]; then
     # with no parameters, provide some helpful documentation
     echo "yadm supports the following configurations:"
     echo
@@ -916,7 +887,7 @@ function config() {
     done
     echo
     local msg
-    read -r -d '' msg << EOF
+    read -r -d '' msg <<EOF
 Please read the CONFIGURATION section in the man
 page for more details about configurations, and
 how to adjust them.
@@ -978,7 +949,7 @@ function _get_cipher() {
   output_archive="$1"
   yadm_cipher="$(config yadm.cipher)"
   if [ -z "$yadm_cipher" ]; then
-      yadm_cipher="gpg"
+    yadm_cipher="gpg"
   fi
 }
 
@@ -1041,7 +1012,7 @@ function decrypt() {
 
   [ -f "$YADM_ENCRYPT" ] && exclude_encrypted
 
-  if [ "$DO_LIST" = "YES" ] ; then
+  if [ "$DO_LIST" = "YES" ]; then
     tar_option="t"
   else
     tar_option="x"
@@ -1081,11 +1052,11 @@ function encrypt() {
   # offer to add YADM_ARCHIVE if untracked
   archive_status=$("$GIT_PROGRAM" status --porcelain -uall "$(mixed_path "$YADM_ARCHIVE")" 2>/dev/null)
   archive_regex="^\?\?"
-  if [[ $archive_status =~ $archive_regex ]] ; then
+  if [[ $archive_status =~ $archive_regex ]]; then
     echo "It appears that $YADM_ARCHIVE is not tracked by yadm's repository."
     echo "Would you like to add it now? (y/n)"
-    read -r answer < /dev/tty
-    if [[ $answer =~ ^[yY]$ ]] ; then
+    read -r answer </dev/tty
+    if [[ $answer =~ ^[yY]$ ]]; then
       "$GIT_PROGRAM" add "$(mixed_path "$YADM_ARCHIVE")"
     fi
   fi
@@ -1149,7 +1120,7 @@ function git_command() {
   require_repo
 
   # translate 'gitconfig' to 'config' -- 'config' is reserved for yadm
-  if [ "$1" = "gitconfig" ] ; then
+  if [ "$1" = "gitconfig" ]; then
     set -- "config" "${@:2}"
   fi
 
@@ -1158,7 +1129,7 @@ function git_command() {
 
   if [ "$YADM_WORK" = "$HOME" ]; then
     auto_private_dirs=$(config --bool yadm.auto-private-dirs)
-    if [ "$auto_private_dirs" != "false" ] ; then
+    if [ "$auto_private_dirs" != "false" ]; then
       for pdir in $(private_dirs all); do
         assert_private_dirs "$pdir"
       done
@@ -1174,9 +1145,16 @@ function git_command() {
 }
 
 function help() {
+  readonly config="${YADM_CONFIG/$HOME/\$HOME}"
+  readonly encrypt="${YADM_ENCRYPT/$HOME/\$HOME}"
+  readonly bootstrap="${YADM_BOOTSTRAP/$HOME/\$HOME}"
+  readonly repo="${YADM_REPO/$HOME/\$HOME}"
+  readonly archive="${YADM_ARCHIVE/$HOME/\$HOME}"
+
+  readonly padding="                                "
 
   local msg
-  IFS='' read -r -d '' msg << EOF
+  IFS='' read -r -d '' msg <<EOF
 Usage: yadm <command> [options...]
 
 Manage dotfiles maintained in a Git repository. Manage alternate files
@@ -1201,11 +1179,11 @@ Commands:
   yadm transcrypt [OPTIONS]  - Run transcrypt commands for the yadm repo
 
 Files:
-  \$HOME/.config/yadm/config        - yadm's configuration file
-  \$HOME/.config/yadm/encrypt       - List of globs to encrypt/decrypt
-  \$HOME/.config/yadm/bootstrap     - Script run via: yadm bootstrap
-  \$HOME/.local/share/yadm/repo.git - yadm's Git repository
-  \$HOME/.local/share/yadm/archive  - Encrypted data stored here
+  $config${padding:${#config}} - yadm's configuration file
+  $encrypt${padding:${#encrypt}} - List of globs to encrypt/decrypt
+  $bootstrap${padding:${#bootstrap}} - Script run via: yadm bootstrap
+  $repo${padding:${#repo}} - yadm's Git repository
+  $archive${padding:${#archive}} - Encrypted data stored here
 
 Use "man yadm" for complete documentation.
 EOF
@@ -1239,9 +1217,9 @@ function init() {
 
 function introspect() {
   case "$1" in
-    commands|configs|repo|switches)
+    commands | configs | repo | switches)
       "introspect_$1"
-    ;;
+      ;;
   esac
 }
 
@@ -1275,6 +1253,8 @@ function introspect_configs() {
   read -r -d '' msg <<-EOF
 local.arch
 local.class
+local.distro
+local.distro-family
 local.hostname
 local.os
 local.user
@@ -1320,7 +1300,7 @@ function list() {
   require_repo
 
   # process relative to YADM_WORK when --all is specified
-  if [ -n "$LIST_ALL" ] ; then
+  if [ -n "$LIST_ALL" ]; then
     cd_work "List" || return
   fi
 
@@ -1345,13 +1325,13 @@ function perms() {
   # only include private globs if using HOME as worktree
   if [ "$YADM_WORK" = "$HOME" ]; then
     # include all .ssh files (unless disabled)
-    if [[ $(config --bool yadm.ssh-perms) != "false" ]] ; then
+    if [[ $(config --bool yadm.ssh-perms) != "false" ]]; then
       GLOBS+=(".ssh" ".ssh/*" ".ssh/.[!.]*")
     fi
 
     # include all gpg files (unless disabled)
     gnupghome="$(private_dirs gnupg)"
-    if [[ $(config --bool yadm.gpg-perms) != "false" ]] ; then
+    if [[ $(config --bool yadm.gpg-perms) != "false" ]]; then
       GLOBS+=("${gnupghome}" "${gnupghome}/*" "${gnupghome}/.[!.]*")
     fi
   fi
@@ -1362,7 +1342,7 @@ function perms() {
   # remove group/other permissions from collected globs
   #shellcheck disable=SC2068
   #(SC2068 is disabled because in this case, we desire globbing)
-  chmod -f go-rwx ${GLOBS[@]} &> /dev/null
+  chmod -f go-rwx ${GLOBS[@]} &>/dev/null
   # TODO: detect and report changing permissions in a portable way
 
 }
@@ -1373,7 +1353,7 @@ function upgrade() {
   local -a submodules
   local repo_updates=0
 
-  [[ -n "${YADM_OVERRIDE_REPO}${YADM_OVERRIDE_ARCHIVE}" || "$YADM_DATA" = "$YADM_DIR" ]] && \
+  [[ -n "${YADM_OVERRIDE_REPO}${YADM_OVERRIDE_ARCHIVE}" || "$YADM_DATA" = "$YADM_DIR" ]] &&
     error_out "Unable to upgrade. Paths have been overridden with command line options"
 
   # choose a legacy repo, the version 2 location will be favored
@@ -1400,18 +1380,18 @@ function upgrade() {
       local submodule_status
       submodule_status=$("$GIT_PROGRAM" -C "$YADM_WORK" submodule status)
       while read -r sha submodule rest; do
-          [ "$submodule" == "" ] && continue
-          if [[ "$sha" = -* ]]; then
-              continue
-          fi
-          "$GIT_PROGRAM" -C "$YADM_WORK" submodule deinit ${FORCE:+-f} -- "$submodule" || {
-              for other in "${submodules[@]}"; do
-                  "$GIT_PROGRAM" -C "$YADM_WORK" submodule update --init --recursive -- "$other"
-              done
-              error_out "Unable to upgrade. Could not deinit submodule $submodule"
-          }
-          submodules+=("$submodule")
-      done <<< "$submodule_status"
+        [ "$submodule" == "" ] && continue
+        if [[ "$sha" = -* ]]; then
+          continue
+        fi
+        "$GIT_PROGRAM" -C "$YADM_WORK" submodule deinit ${FORCE:+-f} -- "$submodule" || {
+          for other in "${submodules[@]}"; do
+            "$GIT_PROGRAM" -C "$YADM_WORK" submodule update --init --recursive -- "$other"
+          done
+          error_out "Unable to upgrade. Could not deinit submodule $submodule"
+        }
+        submodules+=("$submodule")
+      done <<<"$submodule_status"
 
       assert_parent "$YADM_REPO"
       mv "$LEGACY_REPO" "$YADM_REPO"
@@ -1431,7 +1411,7 @@ function upgrade() {
     echo "Moving $LEGACY_ARCHIVE to $YADM_ARCHIVE"
     assert_parent "$YADM_ARCHIVE"
     # test to see if path is "tracked" in repo, if so 'git mv' must be used
-    if "$GIT_PROGRAM" ls-files --error-unmatch "$LEGACY_ARCHIVE" &> /dev/null; then
+    if "$GIT_PROGRAM" ls-files --error-unmatch "$LEGACY_ARCHIVE" &>/dev/null; then
       "$GIT_PROGRAM" mv "$LEGACY_ARCHIVE" "$YADM_ARCHIVE" && repo_updates=1
     else
       mv -i "$LEGACY_ARCHIVE" "$YADM_ARCHIVE"
@@ -1439,13 +1419,11 @@ function upgrade() {
   fi
 
   # handle any remaining version 1 paths
-  for legacy_path in                      \
-    "$YADM_LEGACY_DIR/config"             \
-    "$YADM_LEGACY_DIR/encrypt"            \
-    "$YADM_LEGACY_DIR/bootstrap"          \
-    "$YADM_LEGACY_DIR"/hooks/{pre,post}_* \
-  ;
-  do
+  for legacy_path in \
+    "$YADM_LEGACY_DIR/config" \
+    "$YADM_LEGACY_DIR/encrypt" \
+    "$YADM_LEGACY_DIR/bootstrap" \
+    "$YADM_LEGACY_DIR"/hooks/{pre,post}_*; do
     if [ -e "$legacy_path" ]; then
       new_filename="${legacy_path#"$YADM_LEGACY_DIR/"}"
       new_filename="$YADM_DIR/$new_filename"
@@ -1453,7 +1431,7 @@ function upgrade() {
       echo "Moving $legacy_path to $new_filename"
       assert_parent "$new_filename"
       # test to see if path is "tracked" in repo, if so 'git mv' must be used
-      if "$GIT_PROGRAM" ls-files --error-unmatch "$legacy_path" &> /dev/null; then
+      if "$GIT_PROGRAM" ls-files --error-unmatch "$legacy_path" &>/dev/null; then
         "$GIT_PROGRAM" mv "$legacy_path" "$new_filename" && repo_updates=1
       else
         mv -i "$legacy_path" "$new_filename"
@@ -1463,13 +1441,13 @@ function upgrade() {
 
   # handle submodules, which need to be reinitialized
   for submodule in "${submodules[@]}"; do
-      "$GIT_PROGRAM" -C "$YADM_WORK" submodule update --init --recursive -- "$submodule"
+    "$GIT_PROGRAM" -C "$YADM_WORK" submodule update --init --recursive -- "$submodule"
   done
 
-  [ "$actions_performed" -eq 0 ] && \
+  [ "$actions_performed" -eq 0 ] &&
     echo "No legacy paths found. Upgrade is not necessary"
 
-  [ "$repo_updates" -eq 1 ] && \
+  [ "$repo_updates" -eq 1 ] &&
     echo "Some files tracked by yadm have been renamed. These changes should probably be commited now."
 
   exit 0
@@ -1479,7 +1457,8 @@ function upgrade() {
 function version() {
 
   echo "bash version $BASH_VERSION"
-  printf " "; "$GIT_PROGRAM" --version
+  printf " "
+  "$GIT_PROGRAM" --version
   echo "yadm version $VERSION"
   exit_with_hook 0
 
@@ -1508,7 +1487,7 @@ function exclude_encrypted() {
   encrypt_data=""
   while IFS='' read -r line || [ -n "$line" ]; do
     encrypt_data="${encrypt_data}${line}${newline}"
-  done < "$YADM_ENCRYPT"
+  done <"$YADM_ENCRYPT"
 
   # read info/exclude
   unmanaged=""
@@ -1522,13 +1501,13 @@ function exclude_encrypted() {
       else
         managed="${managed}${line}${newline}"
       fi
-    done < "$exclude_path"
+    done <"$exclude_path"
   fi
 
   if [ "${exclude_header}${encrypt_data}" != "$managed" ]; then
     debug "Updating ${exclude_path}"
     assert_parent "$exclude_path"
-    printf "%s" "${unmanaged}${exclude_header}${encrypt_data}" > "$exclude_path"
+    printf "%s" "${unmanaged}${exclude_header}${encrypt_data}" >"$exclude_path"
   fi
 
   return 0
@@ -1536,73 +1515,75 @@ function exclude_encrypted() {
 }
 
 function query_distro() {
-  distro=""
-  if command -v "$LSB_RELEASE_PROGRAM" &> /dev/null; then
+  local distro=""
+  if command -v "$LSB_RELEASE_PROGRAM" &>/dev/null; then
     distro=$($LSB_RELEASE_PROGRAM -si 2>/dev/null)
   elif [ -f "$OS_RELEASE" ]; then
     while IFS='' read -r line || [ -n "$line" ]; do
       if [[ "$line" = ID=* ]]; then
         distro="${line#ID=}"
-        distro="${distro//\"}"
+        distro="${distro//\"/}"
         break
       fi
-    done < "$OS_RELEASE"
+    done <"$OS_RELEASE"
   fi
   echo "$distro"
 }
 
 function query_distro_family() {
-  family=""
+  local family=""
   if [ -f "$OS_RELEASE" ]; then
     while IFS='' read -r line || [ -n "$line" ]; do
       if [[ "$line" = ID_LIKE=* ]]; then
         family="${line#ID_LIKE=}"
-        family="${family//\"}"
         break
+      elif [[ "$line" = ID=* ]]; then
+        family="${line#ID=}"
+        # No break, only used as fallback in case ID_LIKE isn't found
       fi
-    done < "$OS_RELEASE"
+    done <"$OS_RELEASE"
   fi
-  echo "$family"
+  echo "${family//\"/}"
 }
 
 function process_global_args() {
 
   # global arguments are removed before the main processing is done
   MAIN_ARGS=()
-  while [[ $# -gt 0 ]] ; do
+  while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
-      -Y|--yadm-dir) # override the standard YADM_DIR
+      -Y | --yadm-dir) # override the standard YADM_DIR
         YADM_DIR="$(qualify_path "$2" "yadm")"
         shift
-      ;;
+        ;;
       --yadm-data) # override the standard YADM_DATA
         YADM_DATA="$(qualify_path "$2" "data")"
         shift
-      ;;
+        ;;
       --yadm-repo) # override the standard YADM_REPO
         YADM_OVERRIDE_REPO="$(qualify_path "$2" "repo")"
         shift
-      ;;
+        ;;
       --yadm-config) # override the standard YADM_CONFIG
         YADM_OVERRIDE_CONFIG="$(qualify_path "$2" "config")"
         shift
-      ;;
+        ;;
       --yadm-encrypt) # override the standard YADM_ENCRYPT
         YADM_OVERRIDE_ENCRYPT="$(qualify_path "$2" "encrypt")"
         shift
-      ;;
+        ;;
       --yadm-archive) # override the standard YADM_ARCHIVE
         YADM_OVERRIDE_ARCHIVE="$(qualify_path "$2" "archive")"
         shift
-      ;;
+        ;;
       --yadm-bootstrap) # override the standard YADM_BOOTSTRAP
         YADM_OVERRIDE_BOOTSTRAP="$(qualify_path "$2" "bootstrap")"
         shift
-      ;;
+        ;;
       *) # main arguments are kept intact
         MAIN_ARGS+=("$1")
-      ;;
+        ;;
     esac
     shift
   done
@@ -1610,17 +1591,17 @@ function process_global_args() {
 }
 
 function qualify_path() {
-    local path="$1"
-    if [ -z "$path" ]; then
-        error_out "You can't specify an empty $2 path"
-    fi
+  local path="$1"
+  if [ -z "$path" ]; then
+    error_out "You can't specify an empty $2 path"
+  fi
 
-    if [ "$path" = "." ]; then
-        path="$PWD"
-    elif [[ "$path" != /* ]]; then
-        path="$PWD/${path#./}"
-    fi
-    echo "$path"
+  if [ "$path" = "." ]; then
+    path="$PWD"
+  elif [[ "$path" != /* ]]; then
+    path="$PWD/${path#./}"
+  fi
+  echo "$path"
 }
 
 function set_yadm_dirs() {
@@ -1628,7 +1609,7 @@ function set_yadm_dirs() {
   # only resolve YADM_DATA if it hasn't been provided already
   if [ -z "$YADM_DATA" ]; then
     local base_yadm_data="$XDG_DATA_HOME"
-    if [[ ! "$base_yadm_data" =~ ^/ ]] ; then
+    if [[ ! "$base_yadm_data" =~ ^/ ]]; then
       base_yadm_data="${HOME}/.local/share"
     fi
     YADM_DATA="${base_yadm_data}/yadm"
@@ -1637,7 +1618,7 @@ function set_yadm_dirs() {
   # only resolve YADM_DIR if it hasn't been provided already
   if [ -z "$YADM_DIR" ]; then
     local base_yadm_dir="$XDG_CONFIG_HOME"
-    if [[ ! "$base_yadm_dir" =~ ^/ ]] ; then
+    if [[ ! "$base_yadm_dir" =~ ^/ ]]; then
       base_yadm_dir="${HOME}/.config"
     fi
     YADM_DIR="${base_yadm_dir}/yadm"
@@ -1661,17 +1642,15 @@ function issue_legacy_path_warning() {
   # test for legacy paths
   local legacy_found=()
   # this is ordered by importance
-  for legacy_path in                            \
-    "$YADM_DIR/$YADM_REPO"                      \
-    "$YADM_DIR/$YADM_LEGACY_ARCHIVE"            \
-    "$YADM_LEGACY_DIR/$YADM_REPO"               \
-    "$YADM_LEGACY_DIR/$YADM_BOOTSTRAP"          \
-    "$YADM_LEGACY_DIR/$YADM_CONFIG"             \
-    "$YADM_LEGACY_DIR/$YADM_ENCRYPT"            \
+  for legacy_path in \
+    "$YADM_DIR/$YADM_REPO" \
+    "$YADM_DIR/$YADM_LEGACY_ARCHIVE" \
+    "$YADM_LEGACY_DIR/$YADM_REPO" \
+    "$YADM_LEGACY_DIR/$YADM_BOOTSTRAP" \
+    "$YADM_LEGACY_DIR/$YADM_CONFIG" \
+    "$YADM_LEGACY_DIR/$YADM_ENCRYPT" \
     "$YADM_LEGACY_DIR/$YADM_HOOKS"/{pre,post}_* \
-    "$YADM_LEGACY_DIR/$YADM_LEGACY_ARCHIVE"     \
-  ;
-  do
+    "$YADM_LEGACY_DIR/$YADM_LEGACY_ARCHIVE"; do
     [ -e "$legacy_path" ] && legacy_found+=("$legacy_path")
   done
 
@@ -1708,7 +1687,7 @@ ${path_list}
 ***********
 EOF
   printf '%s\n' "$msg" >&2
-LEGACY_WARNING_ISSUED=1
+  LEGACY_WARNING_ISSUED=1
 
 }
 
@@ -1790,15 +1769,14 @@ function set_operating_system() {
   fi 2>/dev/null
 
   case "$OPERATING_SYSTEM" in
-    CYGWIN*|MINGW*|MSYS*)
+    CYGWIN* | MINGW* | MSYS*)
       git_version="$("$GIT_PROGRAM" --version 2>/dev/null)"
-      if [[ "$git_version" =~ windows ]] ; then
-          USE_CYGPATH=1
+      if [[ "$git_version" =~ windows ]]; then
+        USE_CYGPATH=1
       fi
       OPERATING_SYSTEM=$(uname -o)
       ;;
-    *)
-      ;;
+    *) ;;
   esac
 
 }
@@ -1806,7 +1784,7 @@ function set_operating_system() {
 function set_awk() {
   local pgm
   for pgm in "${AWK_PROGRAM[@]}"; do
-    command -v "$pgm" &> /dev/null && AWK_PROGRAM=("$pgm") && return
+    command -v "$pgm" &>/dev/null && AWK_PROGRAM=("$pgm") && return
   done
 }
 
@@ -1836,8 +1814,8 @@ function invoke_hook() {
   exit_status="$2"
   hook_command="${YADM_HOOKS}/${mode}_$HOOK_COMMAND"
 
-  if [ -x "$hook_command" ] || \
-     { [[ $OPERATING_SYSTEM == MINGW* ]] && [ -f "$hook_command" ] ;} ; then
+  if [ -x "$hook_command" ] ||
+    { [[ $OPERATING_SYSTEM == MINGW* ]] && [ -f "$hook_command" ]; }; then
     debug "Invoking hook: $hook_command"
 
     # expose some internal data to all hooks
@@ -1902,7 +1880,7 @@ function assert_private_dirs() {
     if [ ! -d "$YADM_WORK/$private_dir" ]; then
       debug "Creating $YADM_WORK/$private_dir"
       #shellcheck disable=SC2174
-      mkdir -m 0700 -p "$YADM_WORK/$private_dir" &> /dev/null
+      mkdir -m 0700 -p "$YADM_WORK/$private_dir" &>/dev/null
     fi
   done
 }
@@ -1940,125 +1918,93 @@ function parse_encrypt() {
   fi
 
   ENCRYPT_INCLUDE_FILES=()
-  ENCRYPT_EXCLUDE_FILES=()
-  FINAL_INCLUDE=()
 
   [ -f "$YADM_ENCRYPT" ] || return
 
   cd_work "Parsing encrypt" || return
 
-  # setting globstar to allow ** in encrypt patterns
-  # (only supported on Bash >= 4)
-  local unset_globstar
-  if ! shopt globstar &> /dev/null; then
-    unset_globstar=1
-  fi
-  shopt -s globstar &> /dev/null
+  local -a exclude
+  local -a include
 
-  exclude_pattern="^!(.+)"
-  # parse both included/excluded
-  while IFS='' read -r line || [ -n "$line" ]; do
-    if [[ ! $line =~ ^# && ! $line =~ ^[[:blank:]]*$ ]] ; then
-      local IFS=$'\n'
-      for pattern in $line; do
-        if [[ "$pattern" =~ $exclude_pattern ]]; then
-          for ex_file in ${BASH_REMATCH[1]}; do
-            if [ -e "$ex_file" ]; then
-              ENCRYPT_EXCLUDE_FILES+=("$ex_file")
-            fi
-          done
-        else
-          for in_file in $pattern; do
-            if [ -e "$in_file" ]; then
-              ENCRYPT_INCLUDE_FILES+=("$in_file")
-            fi
-          done
+  while IFS= read -r pattern; do
+    case $pattern in
+      \#*)
+        # Ignore comments
+        ;;
+      !*)
+        exclude+=("--exclude=${pattern:1}")
+        ;;
+      *)
+        if ! [[ $pattern =~ ^[[:blank:]]*$ ]]; then
+          include+=("$pattern")
         fi
-      done
-    fi
-  done < "$YADM_ENCRYPT"
+        ;;
+    esac
+  done <"$YADM_ENCRYPT"
 
-  # remove excludes from the includes
-  #(SC2068 is disabled because in this case, we desire globbing)
-  #shellcheck disable=SC2068
-  for included in "${ENCRYPT_INCLUDE_FILES[@]}"; do
-    skip=
-    #shellcheck disable=SC2068
-    for ex_file in ${ENCRYPT_EXCLUDE_FILES[@]}; do
-      [ "$included" == "$ex_file" ] && { skip=1; break; }
-    done
-    [ -n "$skip" ] || FINAL_INCLUDE+=("$included")
-  done
-
-  # sort the encrypted files
-  #shellcheck disable=SC2207
-  IFS=$'\n' ENCRYPT_INCLUDE_FILES=($(LC_ALL=C sort <<<"${FINAL_INCLUDE[*]}"))
-  unset IFS
-
-  if [ "$unset_globstar" = "1" ]; then
-    shopt -u globstar &> /dev/null
+  if [[ ${#include} -gt 0 ]]; then
+    while IFS= read -r filename; do
+      ENCRYPT_INCLUDE_FILES+=("${filename%/}")
+    done <<<"$("$GIT_PROGRAM" ls-files --others "${exclude[@]}" -- "${include[@]}")"
   fi
-
 }
 
 function builtin_dirname() {
   # dirname is not builtin, and universally available, this is a built-in
   # replacement using parameter expansion
-  path="$1"
-  dname="${path%/*}"
-  if ! [[ "$path" =~ / ]]; then
-    echo "."
-  elif [ "$dname" = "" ]; then
-    echo "/"
-  else
-    echo "$dname"
+  local path="$1"
+  while [ "${path: -1}" = "/" ]; do
+    path="${path%/}"
+  done
+
+  local dir_name="${path%/*}"
+  while [ "${dir_name: -1}" = "/" ]; do
+    dir_name="${dir_name%/}"
+  done
+
+  if [ "$path" = "$dir_name" ]; then
+    dir_name="."
+  elif [ -z "$dir_name" ]; then
+    dir_name="/"
   fi
+  echo "$dir_name"
 }
 
 function relative_path() {
   # Output a path to $2/full, relative to $1/base
   #
-  # This fucntion created with ideas from
+  # This function created with ideas from
   # https://stackoverflow.com/questions/2564634
-  base="$1"
-  full="$2"
+  local base="$1"
+  if [ "${base:0:1}" != "/" ]; then
+    base="$PWD/$base"
+  fi
 
-  common_part="$base"
-  result=""
+  local full="$2"
+  if [ "${full:0:1}" != "/" ]; then
+    full="$PWD/$full"
+  fi
 
-  count=0
-  while [ "${full#"$common_part"}" == "${full}" ]; do
-      [ "$count" = "500" ] && return # this is a failsafe
-      # no match, means that candidate common part is not correct
-      # go up one level (reduce common part)
-      common_part="$(builtin_dirname "$common_part")"
-      # and record that we went back, with correct / handling
-      if [[ -z $result ]]; then
-          result=".."
-      else
-          result="../$result"
-      fi
-      count=$((count+1))
+  local common_part="$base"
+  local result=""
+
+  while [ "$common_part" != "$full" ]; do
+    if [ "$common_part" = "/" ]; then
+      # No common part found. Append / if result is set to make the final
+      # result correct.
+      result="${result:+$result/}"
+      break
+    elif [ "${full#"$common_part"/}" != "$full" ]; then
+      common_part="$common_part/"
+      result="${result:+$result/}"
+      break
+    fi
+    # Move to parent directory and update result
+    common_part=$(builtin_dirname "$common_part")
+    result="..${result:+/$result}"
   done
 
-  if [[ $common_part == "/" ]]; then
-      # special case for root (no common path)
-      result="$result/"
-  fi
-
-  # since we now have identified the common part,
-  # compute the non-common part
-  forward_part="${full#"$common_part"}"
-
-  # and now stick all parts together
-  if [[ -n $result ]] && [[ -n $forward_part ]]; then
-      result="$result$forward_part"
-  elif [[ -n $forward_part ]]; then
-      # extra slash removal
-      result="${forward_part:1}"
-  fi
-
-  echo "$result"
+  echo "$result${full#"$common_part"}"
 }
 
 # ****** Auto Functions ******
@@ -2066,9 +2012,9 @@ function relative_path() {
 function auto_alt() {
 
   # process alternates if there are possible changes
-  if [ "$CHANGES_POSSIBLE" = "1" ] ; then
+  if [ "$CHANGES_POSSIBLE" = "1" ]; then
     auto_alt=$(config --bool yadm.auto-alt)
-    if [ "$auto_alt" != "false" ] ; then
+    if [ "$auto_alt" != "false" ]; then
       [ -d "$YADM_REPO" ] && alt
     fi
   fi
@@ -2078,9 +2024,9 @@ function auto_alt() {
 function auto_perms() {
 
   # process permissions if there are possible changes
-  if [ "$CHANGES_POSSIBLE" = "1" ] ; then
+  if [ "$CHANGES_POSSIBLE" = "1" ]; then
     auto_perms=$(config --bool yadm.auto-perms)
-    if [ "$auto_perms" != "false" ] ; then
+    if [ "$auto_perms" != "false" ]; then
       [ -d "$YADM_REPO" ] && perms
     fi
   fi
@@ -2094,12 +2040,12 @@ function auto_bootstrap() {
   [ "$DO_BOOTSTRAP" -eq 0 ] && return
   [ "$DO_BOOTSTRAP" -eq 3 ] && return
   [ "$DO_BOOTSTRAP" -eq 2 ] && bootstrap
-  if [ "$DO_BOOTSTRAP" -eq 1 ] ; then
+  if [ "$DO_BOOTSTRAP" -eq 1 ]; then
     echo "Found $YADM_BOOTSTRAP"
     echo "It appears that a bootstrap program exists."
     echo "Would you like to execute it now? (y/n)"
-    read -r answer < /dev/tty
-    if [[ $answer =~ ^[yY]$ ]] ; then
+    read -r answer </dev/tty
+    if [[ $answer =~ ^[yY]$ ]]; then
       bootstrap
     fi
   fi
@@ -2109,8 +2055,8 @@ function auto_bootstrap() {
 # ****** Helper Functions ******
 
 function join_string {
-    local IFS="$1"
-    printf "%s" "${*:2}"
+  local IFS="$1"
+  printf "%s" "${*:2}"
 }
 
 function in_list {
@@ -2129,15 +2075,15 @@ function get_mode {
 
   # most *nixes
   mode=$(stat -c '%a' "$filename" 2>/dev/null)
-  if [ -z "$mode" ] ; then
+  if [ -z "$mode" ]; then
     # BSD-style
     mode=$(stat -f '%p' "$filename" 2>/dev/null)
     mode=${mode: -4}
   fi
 
   # only accept results if they are octal
-  if [[ ! $mode =~ ^[0-7]+$ ]] ; then
-    mode=""
+  if [[ ! $mode =~ ^[0-7]+$ ]]; then
+    return 1
   fi
 
   echo "$mode"
@@ -2145,9 +2091,13 @@ function get_mode {
 
 function copy_perms {
   local source="$1"
-  local dest="$2"
-  mode=$(get_mode "$source")
-  [ -n "$mode" ] && chmod "$mode" "$dest"
+  local target="$2"
+
+  local mode
+  if ! mode=$(get_mode "$source") || ! chmod "$mode" "$target"; then
+    debug "Unable to copy perms '$mode' from '$source' to '$target'"
+  fi
+
   return 0
 }
 
@@ -2171,11 +2121,11 @@ function require_git() {
 
   local more_info=""
 
-  if [ "$alt_git" != "" ] ; then
+  if [ "$alt_git" != "" ]; then
     GIT_PROGRAM="$alt_git"
     more_info="\nThis command has been set via the yadm.git-program configuration."
   fi
-  command -v "$GIT_PROGRAM" &> /dev/null ||
+  command -v "$GIT_PROGRAM" &>/dev/null ||
     error_out "This functionality requires Git to be installed, but the command '$GIT_PROGRAM' cannot be located.$more_info"
 }
 function require_gpg() {
@@ -2184,11 +2134,11 @@ function require_gpg() {
 
   local more_info=""
 
-  if [ "$alt_gpg" != "" ] ; then
+  if [ "$alt_gpg" != "" ]; then
     GPG_PROGRAM="$alt_gpg"
     more_info="\nThis command has been set via the yadm.gpg-program configuration."
   fi
-  command -v "$GPG_PROGRAM" &> /dev/null ||
+  command -v "$GPG_PROGRAM" &>/dev/null ||
     error_out "This functionality requires GPG to be installed, but the command '$GPG_PROGRAM' cannot be located.$more_info"
 }
 function require_openssl() {
@@ -2197,11 +2147,11 @@ function require_openssl() {
 
   local more_info=""
 
-  if [ "$alt_openssl" != "" ] ; then
+  if [ "$alt_openssl" != "" ]; then
     OPENSSL_PROGRAM="$alt_openssl"
     more_info="\nThis command has been set via the yadm.openssl-program configuration."
   fi
-  command -v "$OPENSSL_PROGRAM" &> /dev/null ||
+  command -v "$OPENSSL_PROGRAM" &>/dev/null ||
     error_out "This functionality requires OpenSSL to be installed, but the command '$OPENSSL_PROGRAM' cannot be located.$more_info"
 }
 function require_repo() {
@@ -2211,11 +2161,11 @@ function require_shell() {
   [ -x "$SHELL" ] || error_out "\$SHELL does not refer to an executable."
 }
 function require_git_crypt() {
-  command -v "$GIT_CRYPT_PROGRAM" &> /dev/null ||
+  command -v "$GIT_CRYPT_PROGRAM" &>/dev/null ||
     error_out "This functionality requires git-crypt to be installed, but the command '$GIT_CRYPT_PROGRAM' cannot be located."
 }
 function require_transcrypt() {
-  command -v "$TRANSCRYPT_PROGRAM" &> /dev/null ||
+  command -v "$TRANSCRYPT_PROGRAM" &>/dev/null ||
     error_out "This functionality requires transcrypt to be installed, but the command '$TRANSCRYPT_PROGRAM' cannot be located."
 }
 function bootstrap_available() {
@@ -2223,23 +2173,23 @@ function bootstrap_available() {
   return 1
 }
 function awk_available() {
-  command -v "${AWK_PROGRAM[0]}" &> /dev/null && return
+  command -v "${AWK_PROGRAM[0]}" &>/dev/null && return
   return 1
 }
 function j2cli_available() {
-  command -v "$J2CLI_PROGRAM" &> /dev/null && return
+  command -v "$J2CLI_PROGRAM" &>/dev/null && return
   return 1
 }
 function envtpl_available() {
-  command -v "$ENVTPL_PROGRAM" &> /dev/null && return
+  command -v "$ENVTPL_PROGRAM" &>/dev/null && return
   return 1
 }
 function esh_available() {
-  command -v "$ESH_PROGRAM" &> /dev/null && return
+  command -v "$ESH_PROGRAM" &>/dev/null && return
   return 1
 }
 function readlink_available() {
-  command -v "readlink" &> /dev/null && return
+  command -v "readlink" &>/dev/null && return
   return 1
 }
 
@@ -2247,7 +2197,7 @@ function readlink_available() {
 
 function unix_path() {
   # for paths used by bash/yadm
-  if [ "$USE_CYGPATH" = "1" ] ; then
+  if [ "$USE_CYGPATH" = "1" ]; then
     cygpath -u "$1"
   else
     echo "$1"
@@ -2255,7 +2205,7 @@ function unix_path() {
 }
 function mixed_path() {
   # for paths used by Git
-  if [ "$USE_CYGPATH" = "1" ] ; then
+  if [ "$USE_CYGPATH" = "1" ]; then
     cygpath -m "$1"
   else
     echo "$1"
@@ -2279,7 +2229,7 @@ function echo_e() {
 
 # ****** Main processing (when not unit testing) ******
 
-if [ "$YADM_TEST" != 1 ] ; then
+if [ "$YADM_TEST" != 1 ]; then
   process_global_args "$@"
   set_operating_system
   set_awk

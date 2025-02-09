@@ -19,13 +19,15 @@ import pytest
     ],
 )
 @pytest.mark.parametrize("submodule", [False, True], ids=["no submodule", "with submodules"])
-def test_upgrade(tmpdir, runner, versions, submodule):
+def test_upgrade(tmpdir, runner, paths, versions, submodule):
     """Upgrade tests"""
     # pylint: disable=too-many-statements
     home = tmpdir.mkdir("HOME")
     env = {"HOME": str(home)}
     runner(["git", "config", "--global", "init.defaultBranch", "master"], env=env)
     runner(["git", "config", "--global", "protocol.file.allow", "always"], env=env)
+    runner(["git", "config", "--global", "user.email", "test@yadm.io"], env=env)
+    runner(["git", "config", "--global", "user.name", "Yadm Test"], env=env)
 
     if submodule:
         ext_repo = tmpdir.mkdir("ext_repo")
@@ -39,7 +41,7 @@ def test_upgrade(tmpdir, runner, versions, submodule):
     os.environ.pop("XDG_DATA_HOME", None)
 
     def run_version(version, *args, check_stderr=True):
-        yadm = f"yadm-{version}" if version else "/yadm/yadm"
+        yadm = f"yadm-{version}" if version else paths.pgm
         run = runner([yadm, *args], shell=True, cwd=str(home), env=env)
         assert run.success
         if check_stderr:

@@ -35,18 +35,20 @@ REPO_URL=""
 
 function _private_yadm() {
   unset -f yadm
-  if command -v yadm &> /dev/null; then
+  if command -v yadm &>/dev/null; then
     echo "Found yadm installed locally, removing remote yadm() function"
     unset -f _private_yadm
     command yadm "$@"
   else
-    function yadm() { _private_yadm "$@"; }; export -f yadm
+    function yadm() { _private_yadm "$@"; }
+    export -f yadm
     echo WARNING: Using yadm remotely. You should install yadm locally.
     curl -fsSL "$YADM_REPO/raw/$YADM_RELEASE/yadm" | bash -s -- "$@"
   fi
 }
 export -f _private_yadm
-function yadm() { _private_yadm "$@"; }; export -f yadm
+function yadm() { _private_yadm "$@"; }
+export -f yadm
 
 # if being sourced, return here, otherwise continue processing
 return 2>/dev/null
@@ -57,7 +59,7 @@ function remote_yadm() {
 }
 
 function ask_about_source() {
-  if ! command -v yadm &> /dev/null; then
+  if ! command -v yadm &>/dev/null; then
     echo
     echo "***************************************************"
     echo "yadm is NOT currently installed."
@@ -83,7 +85,7 @@ function build_url() {
   echo "  3. GitLab"
   echo "  4. Other"
   echo
-  read -r -p "Where is your repo? (1/2/3/4) ->" choice < /dev/tty
+  read -r -p "Where is your repo? (1/2/3/4) ->" choice </dev/tty
   case $choice in
     1)
       REPO_URL="https://github.com/"
@@ -97,7 +99,7 @@ function build_url() {
     *)
       echo
       echo Please specify the full URL of your dotfiles repo
-      read -r -p "URL ->" choice < /dev/tty
+      read -r -p "URL ->" choice </dev/tty
       REPO_URL="$choice"
       return
       ;;
@@ -107,7 +109,7 @@ function build_url() {
   echo "Provide your user and repo separated by '/'"
   echo "For example: UserName/dotfiles"
   echo
-  read -r -p "User/Repo ->" choice < /dev/tty
+  read -r -p "User/Repo ->" choice </dev/tty
   [[ "$choice" =~ ^[^[:space:]]+/[^[:space:]]+$ ]] || {
     echo "Not formatted as USER/REPO"
     REPO_URL=

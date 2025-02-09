@@ -1,4 +1,5 @@
 """Test alt"""
+
 import os
 import string
 
@@ -167,6 +168,21 @@ def test_alt_templates(runner, paths, kind, label):
             assert paths.work.join(created_path).isfile()
             assert paths.work.join(created_path).read().strip() == source_file
             assert str(paths.work.join(source_file)) in created
+
+
+@pytest.mark.usefixtures("ds1_copy")
+def test_alt_template_with_condition(runner, paths, tst_arch):
+    """Test template with extra condition"""
+    yadm_dir, yadm_data = setup_standard_yadm_dir(paths)
+
+    suffix = f"##template,arch.not{tst_arch}"
+    utils.create_alt_files(paths, suffix)
+    run = runner([paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "alt"])
+    assert run.success
+    assert run.err == ""
+
+    created = utils.parse_alt_output(run.out, linked=False)
+    assert len(created) == 0
 
 
 @pytest.mark.usefixtures("ds1_copy")

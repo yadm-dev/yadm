@@ -1,4 +1,5 @@
 """Unit tests: remove_stale_links"""
+
 import os
 
 import pytest
@@ -24,7 +25,7 @@ def test_remove_stale_links(runner, yadm, tmpdir, kind, linked):
 
     script = f"""
         YADM_TEST=1 source {yadm}
-        possible_alts=({link})
+        possible_alt_targets=({link})
         alt_linked=({alt_linked})
         function rm() {{ echo rm "$@"; }}
         remove_stale_links

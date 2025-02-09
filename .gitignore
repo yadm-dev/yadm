@@ -5,3 +5,4 @@
 .testyadm
 _site
 testenv
+__pycache__/

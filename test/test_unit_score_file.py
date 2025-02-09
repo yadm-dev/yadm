@@ -1,4 +1,5 @@
 """Unit tests: score_file"""
+
 import pytest
 
 CONDITION = {
@@ -53,42 +54,42 @@ def calculate_score(filename):
         if label in CONDITION["default"]["labels"]:
             score += 1000
         elif label in CONDITION["arch"]["labels"]:
-            if value == "testarch":
+            if value.lower() == "testarch":
                 score += 1000 + CONDITION["arch"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["system"]["labels"]:
-            if value == "testsystem":
+            if value.lower() == "testsystem":
                 score += 1000 + CONDITION["system"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["distro"]["labels"]:
-            if value == "testdistro":
+            if value.lower() == "testdistro":
                 score += 1000 + CONDITION["distro"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["class"]["labels"]:
-            if value == "testclass":
+            if value.lower() == "testclass":
                 score += 1000 + CONDITION["class"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["hostname"]["labels"]:
-            if value == "testhost":
+            if value.lower() == "testhost":
                 score += 1000 + CONDITION["hostname"]["modifier"]
             else:
                 score = 0
                 break
         elif label in CONDITION["user"]["labels"]:
-            if value == "testuser":
+            if value.lower() == "testuser":
                 score += 1000 + CONDITION["user"]["modifier"]
             else:
                 score = 0
                 break
-        elif label in TEMPLATE_LABELS:
+        elif label not in TEMPLATE_LABELS:
             score = 0
             break
     return score
@@ -104,12 +105,12 @@ def calculate_score(filename):
 def test_score_values(runner, yadm, default, arch, system, distro, cla, host, user):
     """Test score results"""
     # pylint: disable=too-many-branches
-    local_class = "testclass"
-    local_arch = "testarch"
-    local_system = "testsystem"
-    local_distro = "testdistro"
-    local_host = "testhost"
-    local_user = "testuser"
+    local_class = "testClass"
+    local_arch = "testARch"
+    local_system = "TESTsystem"
+    local_distro = "testDISTro"
+    local_host = "testHost"
+    local_user = "testUser"
     filenames = {"filename##": 0}
 
     if default:
@@ -189,7 +190,7 @@ def test_score_values(runner, yadm, default, arch, system, distro, cla, host, us
     expected = ""
     for filename, score in filenames.items():
         script += f"""
-            score_file "{filename}"
+            score_file "{filename}" "dest"
             echo "{filename}"
             echo "$score"
         """
@@ -254,7 +255,7 @@ def test_score_values_templates(runner, yadm):
     expected = ""
     for filename, score in filenames.items():
         script += f"""
-            score_file "{filename}"
+            score_file "{filename}" "dest"
             echo "{filename}"
             echo "$score"
         """
@@ -266,19 +267,19 @@ def test_score_values_templates(runner, yadm):
     assert run.out == expected
 
 
-@pytest.mark.parametrize("cmd_generated", [True, False], ids=["supported-template", "unsupported-template"])
-def test_template_recording(runner, yadm, cmd_generated):
-    """Template should be recorded if choose_template_cmd outputs a command"""
+@pytest.mark.parametrize("processor_generated", [True, False], ids=["supported-template", "unsupported-template"])
+def test_template_recording(runner, yadm, processor_generated):
+    """Template should be recorded if choose_template_processor outputs a command"""
 
-    mock = "function choose_template_cmd() { return; }"
+    mock = "function choose_template_processor() { return; }"
     expected = ""
-    if cmd_generated:
-        mock = 'function choose_template_cmd() { echo "test_cmd"; }'
+    if processor_generated:
+        mock = 'function choose_template_processor() { echo "test_processor"; }'
         expected = "template recorded"
 
     script = f"""
         YADM_TEST=1 source {yadm}
-        function record_template() {{ echo "template recorded"; }}
+        function record_score() {{ [ -n "$4" ] && echo "template recorded"; }}
         {mock}
         score_file "testfile##template.kind"
     """
@@ -288,15 +289,15 @@ def test_template_recording(runner, yadm, cmd_generated):
     assert run.out.rstrip() == expected
 
 
-def test_underscores_in_distro_and_family(runner, yadm):
-    """Test replacing spaces in distro / distro_family with underscores"""
+def test_underscores_and_upper_case_in_distro_and_family(runner, yadm):
+    """Test replacing spaces with underscores and lowering case in distro / distro_family"""
     local_distro = "test distro"
     local_distro_family = "test family"
     filenames = {
-        "filename##distro.test distro": 1004,
+        "filename##distro.Test Distro": 1004,
         "filename##distro.test-distro": 0,
         "filename##distro.test_distro": 1004,
-        "filename##distro_family.test family": 1008,
+        "filename##distro_family.test FAMILY": 1008,
         "filename##distro_family.test-family": 0,
         "filename##distro_family.test_family": 1008,
     }

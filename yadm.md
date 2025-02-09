@@ -28,11 +28,11 @@
 
        yadm perms
 
-       yadm enter [ command ]
+       yadm enter [command]
 
-       yadm git-crypt [ options ]
+       yadm git-crypt [options]
 
-       yadm transcrypt [ options ]
+       yadm transcrypt [options]
 
        yadm upgrade [-f]
 
@@ -95,26 +95,26 @@
 
        decrypt
               Decrypt all  files  stored  in  $HOME/.local/share/yadm/archive.
-              Files  decrypted  will  be  relative to the configured work-tree
-              (usually $HOME).  Using the -l option will list the files stored
-              without extracting them.
+              Files  decrypted  will  be  relative  to  the  configured  work-
+              tree (usually $HOME).  Using the -l option will list  the  files
+              stored without extracting them.
 
        encrypt
-              Encrypt all files matching the  patterns  found  in  $HOME/.con‐
+              Encrypt  all  files  matching  the patterns found in $HOME/.con‐
               fig/yadm/encrypt.  See the ENCRYPTION section for more details.
 
-       enter  Run  a  sub-shell with all Git variables set. Exit the sub-shell
-              the same way you leave  your  normal  shell  (usually  with  the
-              "exit"  command).  This sub-shell can be used to easily interact
-              with your yadm repository using "git" commands.  This  could  be
-              useful  if you are using a tool which uses Git directly, such as
+       enter  Run a sub-shell with all Git variables set. Exit  the  sub-shell
+              the  same  way  you  leave  your  normal shell (usually with the
+              "exit" command). This sub-shell can be used to  easily  interact
+              with  your  yadm  repository using "git" commands. This could be
+              useful if you are using a tool which uses Git directly, such  as
               tig, vim-fugitive, git-cola, etc.
 
               Optionally, you can provide a command after "enter", and instead
               of invoking your shell, that command will be run with all of the
               Git variables exposed to the command's environment.
 
-              Emacs Tramp and Magit can manage files by using this  configura‐
+              Emacs  Tramp and Magit can manage files by using this configura‐
               tion:
 
                   (add-to-list 'tramp-methods
@@ -128,58 +128,58 @@
               With this config, use (magit-status "/yadm::").
 
        git-crypt options
-              If  git-crypt  is installed, this command allows you to pass op‐
-              tions directly to git-crypt, with the environment configured  to
+              If git-crypt is installed, this command allows you to  pass  op‐
+              tions  directly to git-crypt, with the environment configured to
               use the yadm repository.
 
               git-crypt enables transparent encryption and decryption of files
-              in  a git repository.  You can read https://github.com/AGWA/git-
+              in a git repository. You can  read  https://github.com/AGWA/git-
               crypt for details.
 
        gitconfig
-              Pass options to the git config command. Since yadm already  uses
-              the  config  command to manage its own configurations, this com‐
+              Pass  options to the git config command. Since yadm already uses
+              the config command to manage its own configurations,  this  com‐
               mand is provided as a way to change configurations of the repos‐
-              itory managed by yadm.  One useful case might  be  to  configure
-              the  repository so untracked files are shown in status commands.
+              itory  managed  by  yadm.  One useful case might be to configure
+              the repository so untracked files are shown in status  commands.
               yadm initially configures its repository so that untracked files
-              are not shown.  If you wish use the  default  Git  behavior  (to
-              show  untracked files and directories), you can remove this con‐
+              are  not  shown.   If  you wish use the default Git behavior (to
+              show untracked files and directories), you can remove this  con‐
               figuration.
 
                      yadm gitconfig --unset status.showUntrackedFiles
 
        help   Print a summary of yadm commands.
 
-       init   Initialize a new, empty repository for tracking  dotfiles.   The
-              repository  is  stored  in $HOME/.local/share/yadm/repo.git.  By
-              default, $HOME will be used as the work-tree, but  this  can  be
-              overridden  with the -w option.  yadm can be forced to overwrite
+       init   Initialize  a  new, empty repository for tracking dotfiles.  The
+              repository is stored  in  $HOME/.local/share/yadm/repo.git.   By
+              default,  $HOME  will  be used as the work-tree, but this can be
+              overridden with the -w option.  yadm can be forced to  overwrite
               an existing repository by providing the -f option.
 
        list   Print a list of files managed by yadm.  The -a option will cause
-              all managed files to be listed.  Otherwise, the list  will  only
+              all  managed  files to be listed.  Otherwise, the list will only
               include files from the current directory or below.
 
        introspect category
-              Report  internal  yadm  data. Supported categories are commands,
+              Report internal yadm data. Supported  categories  are  commands,
               configs, repo, and switches.  The purpose of introspection is to
               support command line completion.
 
-       perms  Update permissions as described in the PERMISSIONS section.   It
-              is  usually  unnecessary  to run this command, as yadm automati‐
-              cally processes permissions by default. This automatic  behavior
-              can  be disabled by setting the configuration yadm.auto-perms to
+       perms  Update  permissions as described in the PERMISSIONS section.  It
+              is usually unnecessary to run this command,  as  yadm  automati‐
+              cally  processes permissions by default. This automatic behavior
+              can be disabled by setting the configuration yadm.auto-perms  to
               "false".
 
        transcrypt options
-              If transcrypt is installed, this command allows you to pass  op‐
+              If  transcrypt is installed, this command allows you to pass op‐
               tions directly to transcrypt, with the environment configured to
               use the yadm repository.
 
-              transcrypt  enables  transparent  encryption  and  decryption of
-              files    in    a    git    repository.      You     can     read
-              https://github.com/elasticdog/transcrypt for details.
+              transcrypt enables  transparent  encryption  and  decryption  of
+              files in a git repository. You can read https://github.com/elas‐
+              ticdog/transcrypt for details.
 
        upgrade
               Version  3  of yadm uses a different directory for storing data.
@@ -223,7 +223,7 @@
        The  following  is  the  full  list  of universal options.  Each option
        should be followed by a path.
 
-       -Y,--yadm-dir
+       -Y, --yadm-dir
               Override the yadm directory.   yadm  stores  its  configurations
               relative to this directory.
 
@@ -329,8 +329,9 @@
               Disable the permission changes to $HOME/.ssh/*.  This feature is
               enabled by default.
 
-       The following  five  "local"  configurations  are  not  stored  in  the
-       $HOME/.config/yadm/config, they are stored in the local repository.
+
+       The following "local" configurations are not stored in the  $HOME/.con‐
+       fig/yadm/config, they are stored in the local repository.
 
 
        local.class
@@ -354,6 +355,14 @@
        local.user
               Override the user for the purpose of symlinking alternate files.
 
+       local.distro
+              Override the distro for  the  purpose  of  symlinking  alternate
+              files.
+
+       local.distro-family
+              Override  the distro family for the purpose of symlinking alter‐
+              nate files.
+
 
 ## ALTERNATES
        When managing a set of files across different systems, it can be useful
@@ -376,6 +385,8 @@
        letter.
 
          <attribute>[.<value>]
+
+       NOTE: Value is compared case-insensitive.
 
        These are the supported attributes, in the order of the weighted prece‐
        dence:
@@ -406,13 +417,14 @@
 
        distro_family, f
               Valid if the value matches the distro family.  Distro family  is
-              calculated by inspecting the ID_LIKE line from /etc/os-release.
+              calculated  by  inspecting the ID_LIKE line from /etc/os-release
+              (or ID if no ID_LIKE line is found).
 
-       os, o  Valid  if the value matches the OS.  OS is calculated by running
+       os, o  Valid if the value matches the OS.  OS is calculated by  running
               uname -s.
 
        arch, a
-              Valid if the value matches the  architecture.   Architecture  is
+              Valid  if  the  value matches the architecture.  Architecture is
               calculated by running uname -m.
 
        default
@@ -421,30 +433,31 @@
        extension, e
               A special "condition" that doesn't affect the selection process.
               Its purpose is instead to allow the alternate file to end with a
-              certain  extension  to  e.g.  make editors highlight the content
+              certain extension to e.g. make  editors  highlight  the  content
               properly.
 
-       NOTE: The OS for "Windows Subsystem for Linux" is  reported  as  "WSL",
+
+       NOTE:  The  OS  for "Windows Subsystem for Linux" is reported as "WSL",
        even though uname identifies as "Linux".
 
-       You  may use any number of conditions, in any order.  An alternate will
-       only be used if ALL conditions are valid.  For  all  files  managed  by
-       yadm's  repository  or  listed  in  $HOME/.config/yadm/encrypt, if they
-       match this naming convention, symbolic links will be  created  for  the
+       You may use any number of conditions, in any order.  An alternate  will
+       only  be  used  if  ALL conditions are valid.  For all files managed by
+       yadm's repository or  listed  in  $HOME/.config/yadm/encrypt,  if  they
+       match  this  naming  convention, symbolic links will be created for the
        most appropriate version.
 
        The "most appropriate" version is determined by calculating a score for
-       each  version  of  a  file. A template is always scored higher than any
-       symlink condition. The number of conditions is the next largest  factor
+       each version of a file. A template is always  scored  higher  than  any
+       symlink  condition. The number of conditions is the next largest factor
        in scoring.  Files with more conditions will always be favored. Any in‐
        valid condition will disqualify that file completely.
 
        If you don't care to have all versions of alternates stored in the same
        directory  as  the  generated  symlink,  you  can  place  them  in  the
-       $HOME/.config/yadm/alt directory. The generated  symlink  or  processed
+       $HOME/.config/yadm/alt  directory.  The  generated symlink or processed
        template will be created using the same relative path.
 
-       Alternate  linking may best be demonstrated by example. Assume the fol‐
+       Alternate linking may best be demonstrated by example. Assume the  fol‐
        lowing files are managed by yadm's repository:
 
          - $HOME/path/example.txt##default
@@ -467,7 +480,7 @@
 
        $HOME/path/example.txt -> $HOME/path/example.txt##os.Darwin
 
-       Since  the  hostname  doesn't  match any of the managed files, the more
+       Since the hostname doesn't match any of the  managed  files,  the  more
        generic version is chosen.
 
        If running on a Linux server named "host4", the link will be:
@@ -482,27 +495,28 @@
 
        $HOME/path/example.txt -> $HOME/path/example.txt##class.Work
 
-       If no "##default" version exists and no files  have  valid  conditions,
+       If  no  "##default"  version exists and no files have valid conditions,
        then no link will be created.
 
-       Links  are also created for directories named this way, as long as they
-       have at least one yadm managed file within them (at the top level).
+       Links are also created for directories named this way, as long as  they
+       have at least one yadm managed file within them.
 
        yadm will automatically create these links by default. This can be dis‐
-       abled using the yadm.auto-alt configuration.  Even if  disabled,  links
+       abled  using  the yadm.auto-alt configuration.  Even if disabled, links
        can be manually created by running yadm alt.
 
-       Class  is  a special value which is stored locally on each host (inside
-       the local repository). To use alternate symlinks using class, you  must
-       set  the  value  of class using the configuration local.class.  This is
+       Class is a special value which is stored locally on each  host  (inside
+       the  local repository). To use alternate symlinks using class, you must
+       set the value of class using the configuration  local.class.   This  is
        set like any other yadm configuration with the yadm config command. The
        following sets the class to be "Work".
 
          yadm config local.class Work
 
-       Similarly, the values of architecture, os, hostname, and  user  can  be
-       manually  overridden  using  the  configuration options local.arch, lo‐
-       cal.os, local.hostname, and local.user.
+       Similarly,  the values of architecture, os, hostname, user, distro, and
+       distro_family can be manually overridden using  the  configuration  op‐
+       tions  local.arch,  local.os, local.hostname, local.user, local.distro,
+       and local.distro-family.
 
 
 ## TEMPLATES
@@ -519,6 +533,9 @@
               on most *nix systems. To use this processor, specify  the  value
               of "default" or just leave the value off (e.g. "##template").
 
+              NOTE: This template processor performs case-insensitive compari‐
+              sions in if statements.
+
        ESH    ESH is a template processor written in POSIX compliant shell. It
               allows  executing  shell  commands within templates. This can be
               used to reference your own configurations within templates,  for
@@ -533,6 +550,7 @@
 
        envtpl To use the envtpl Jinja template processor, specify the value of
               "j2" or "envtpl".
+
 
        NOTE: Specifying "j2" as the processor will attempt to use j2cli or en‐
        vtpl, whichever is available.
@@ -614,19 +632,19 @@
        are  supported.   gpg is used by default, but openssl can be configured
        with the yadm.cipher configuration.
 
-       To use this feature, a list of patterns must be created  and  saved  as
-       $HOME/.config/yadm/encrypt.   This  list of patterns should be relative
-       to the configured work-tree (usually $HOME).  For example:
+       To use this feature, a list of patterns (one per line) must be  created
+       and  saved as $HOME/.config/yadm/encrypt.  This list of patterns should
+       be relative to the configured work-tree (usually $HOME).  For example:
 
                   .ssh/*.key
                   .gnupg/*.gpg
 
-       Standard filename expansions (*, ?, [) are supported.  If you have Bash
-       version 4, you may use "**" to match all subdirectories.   Other  shell
+       Standard filename expansions (*, ?, [) are supported.  Two  consecutive
+       asterisks  "**"  can  be used to match all subdirectories.  Other shell
        expansions like brace and tilde are not supported.  Spaces in paths are
-       supported,  and should not be quoted.  If a directory is specified, its
-       contents will be included, but not recursively.  Paths beginning with a
-       "!" will be excluded.
+       supported, and should not be quoted.  If a directory is specified,  its
+       contents  will  be  included.   Paths  beginning with a "!" will be ex‐
+       cluded.
 
        The yadm encrypt command will find all files matching the patterns, and
        prompt for a password. Once a  password  has  confirmed,  the  matching
@@ -660,6 +678,7 @@
        - https://github.com/elasticdog/transcrypt
 
        - https://github.com/AGWA/git-crypt
+
 
 ## PERMISSIONS
        When  files  are checked out of a Git repository, their initial permis‐
@@ -713,6 +732,12 @@
 
        YADM_HOOK_COMMAND
               The command which triggered the hook
+
+       YADM_HOOK_DATA
+              The path to the yadm data directory
+
+       YADM_HOOK_DIR
+              The path to the yadm directory
 
        YADM_HOOK_EXIT
               The exit status of the yadm command
@@ -799,8 +824,10 @@
        https://github.com/yadm-dev/yadm/issues
 
 
-## AUTHOR
+## AUTHORS
        Tim Byrne <sultan@locehilios.com>
+
+       Erik Flodin <erik@flodin.me>
 
 
 ## SEE ALSO

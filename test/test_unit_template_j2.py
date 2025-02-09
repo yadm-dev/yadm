@@ -1,4 +1,5 @@
 """Unit tests: template_j2cli & template_envtpl"""
+
 import os
 
 import pytest
@@ -145,7 +146,7 @@ def test_template_j2(runner, yadm, tmpdir, processor):
         local_user="{LOCAL_USER}"
         local_distro="{LOCAL_DISTRO}"
         local_distro_family="{LOCAL_DISTRO_FAMILY}"
-        template_{processor} "{input_file}" "{output_file}"
+        template {processor} "{input_file}" "{output_file}"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success
@@ -165,7 +166,7 @@ def test_source(runner, yadm, tmpdir, processor):
 
     script = f"""
         YADM_TEST=1 source {yadm}
-        template_{processor} "{input_file}" "{output_file}"
+        template {processor} "{input_file}" "{output_file}"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success
