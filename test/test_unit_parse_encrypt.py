@@ -100,10 +100,11 @@ def create_test_encrypt_data(paths):
     edata += "*card1\n"  # matches same file as the one above
     paths.work.join("wildcard1").write("", ensure=True)
     paths.work.join("wildcard2").write("", ensure=True)
+    paths.work.join("subdir/wildcard1").write("", ensure=True)
     expected.add("wildcard1")
     expected.add("wildcard2")
 
-    edata += "dirwild*\n"
+    edata += "dirwild*/file*\n"
     paths.work.join("dirwildcard/file1").write("", ensure=True)
     paths.work.join("dirwildcard/file2").write("", ensure=True)
     expected.add("dirwildcard/file1")
@@ -124,6 +125,9 @@ def create_test_encrypt_data(paths):
     paths.work.join("ex ex/file6.text").write("", ensure=True)
     expected.add("ex ex/file4")
     expected.add("ex ex/file6.text")
+
+    paths.work.join("dirwildcard/file7.ex").write("", ensure=True)
+    expected.add("dirwildcard/file7.ex")
 
     # double star
     edata += "doublestar/**/file*\n"

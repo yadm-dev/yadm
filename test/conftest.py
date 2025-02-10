@@ -609,14 +609,14 @@ disable-scdaemon
     env["GNUPGHOME"] = home
 
     # this pre-populates std files in the GNUPGHOME
-    runner(["gpg", "-k"], env=env)
+    runner(["gpg", "-k"], env=env, report=False)
 
     def register_gpg_password(password):
         """Publish a new GPG mock password and flush cached passwords"""
         home.join("mock-password").write(password)
-        runner(["gpgconf", "--reload", "gpg-agent"], env=env)
+        runner(["gpgconf", "--reload", "gpg-agent"], env=env, report=False)
 
     yield data(home, register_gpg_password)
 
-    runner(["gpgconf", "--kill", "gpg-agent"], env=env)
-    runner(["gpgconf", "--remove-socketdir", "gpg-agent"], env=env)
+    runner(["gpgconf", "--kill", "gpg-agent"], env=env, report=False)
+    runner(["gpgconf", "--remove-socketdir", "gpg-agent"], env=env, report=False)

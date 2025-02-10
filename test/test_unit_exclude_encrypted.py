@@ -24,7 +24,7 @@ def test_exclude_encrypted(runner, tmpdir, yadm, encrypt_exists, auto_exclude, e
     if exclude == "outdated":
         exclude_file.write(f"original-exclude\n{header}outdated\n", ensure=True)
     elif exclude == "up-to-date":
-        exclude_file.write(f"original-exclude\n{header}test-encrypt-data\n", ensure=True)
+        exclude_file.write(f"original-exclude\n{header}/test-encrypt-data\n", ensure=True)
 
     script = f"""
         YADM_TEST=1 source {yadm}
@@ -42,9 +42,9 @@ def test_exclude_encrypted(runner, tmpdir, yadm, encrypt_exists, auto_exclude, e
         if encrypt_exists:
             assert exclude_file.exists()
             if exclude == "missing":
-                assert exclude_file.read() == f"{header}test-encrypt-data\n"
+                assert exclude_file.read() == f"{header}/test-encrypt-data\n"
             else:
-                assert exclude_file.read() == ("original-exclude\n" f"{header}test-encrypt-data\n")
+                assert exclude_file.read() == ("original-exclude\n" f"{header}/test-encrypt-data\n")
             if exclude != "up-to-date":
                 assert f"Updating {exclude_file}" in run.out
             else:

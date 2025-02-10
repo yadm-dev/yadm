@@ -92,6 +92,7 @@ def encrypt_targets(yadm_cmd, paths):
     paths.work.join("globs dir/globs file2").write("globs file2")
     expected.append("globs dir/globs file2")
     paths.encrypt.write("globs*\n", mode="a")
+    paths.encrypt.write("globs d*/globs*\n", mode="a")
 
     # blank lines
     paths.encrypt.write("\n        \n\t\n", mode="a")
@@ -404,8 +405,8 @@ def test_encrypt_added_to_exclude(runner, yadm_cmd, paths, gnupg):
 
     run = runner(yadm_cmd("encrypt"), env=env)
 
-    assert "test-encrypt-data" in paths.repo.join("info/exclude").read()
-    assert "original-data" in paths.repo.join("info/exclude").read()
+    assert "test-encrypt-data" in exclude_file.read()
+    assert "original-data" in exclude_file.read()
     assert run.success
     assert run.err == ""
 
