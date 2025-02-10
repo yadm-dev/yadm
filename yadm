@@ -1932,7 +1932,7 @@ function parse_encrypt() {
         # Ignore comments
         ;;
       !*)
-        exclude+=("--exclude=${pattern:1}")
+        exclude+=("--exclude=/${pattern:1}")
         ;;
       *)
         if ! [[ $pattern =~ ^[[:blank:]]*$ ]]; then
@@ -1945,7 +1945,10 @@ function parse_encrypt() {
   if [[ ${#include} -gt 0 ]]; then
     while IFS= read -r filename; do
       ENCRYPT_INCLUDE_FILES+=("${filename%/}")
-    done <<<"$("$GIT_PROGRAM" ls-files --others "${exclude[@]}" -- "${include[@]}")"
+    done <<<"$(
+      "$GIT_PROGRAM" --glob-pathspecs ls-files --others \
+        "${exclude[@]}" -- "${include[@]}" 2>/dev/null
+    )"
   fi
 }
 

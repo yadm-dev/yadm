@@ -92,6 +92,7 @@ def encrypt_targets(yadm_cmd, paths):
     paths.work.join("globs dir/globs file2").write("globs file2")
     expected.append("globs dir/globs file2")
     paths.encrypt.write("globs*\n", mode="a")
+    paths.encrypt.write("globs*/globs*\n", mode="a")
 
     # blank lines
     paths.encrypt.write("\n        \n\t\n", mode="a")
