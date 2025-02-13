@@ -321,3 +321,24 @@ def test_underscores_and_upper_case_in_distro_and_family(runner, yadm):
     assert run.success
     assert run.err == ""
     assert run.out == expected
+
+def test_negative_class_condition(runner, yadm):
+    """Test negative class condition: returns 0 when matching and proper score when not matching."""
+    script = f"""
+        YADM_TEST=1 source {yadm}
+        score=0
+        local_class="testclass"
+        local_classes=("testclass")
+        # Negative condition with matching value should yield delta -1 and zero the score.
+        score_file "filename##!class.testclass" "dest"
+        echo "score: $score"
+        # Negative condition with non-matching value should yield delta 16.
+        score=0
+        score_file "filename##!class.badclass" "dest"
+        echo "score2: $score"
+    """
+    run = runner(command=["bash"], inp=script)
+    assert run.success
+    output = run.out.strip().splitlines()
+    assert output[0] == "score: 0"
+    assert output[1] == "score2: 1016"

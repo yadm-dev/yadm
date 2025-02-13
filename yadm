@@ -179,6 +179,13 @@ function score_file() {
     local value=${field#*.}
     [ "$field" = "$label" ] && value="" # when .value is omitted
 
+    # Check for negative condition prefix (e.g., "!<label>")
+    local negate=0
+    if [[ "$label" == !* ]]; then
+      negate=1
+      label="${label:1}"
+    fi
+
     shopt -s nocasematch
     local -i delta=-1
     case "$label" in
@@ -186,28 +193,55 @@ function score_file() {
         delta=0
         ;;
       a | arch)
-        [[ "$value" = "$local_arch" ]] && delta=1
+        if [[ "$value" = "$local_arch" ]]; then
+          (( negate )) && delta=-1 || delta=1
+        else
+          (( negate )) && delta=1
+        fi
         ;;
       o | os)
-        [[ "$value" = "$local_system" ]] && delta=2
+        if [[ "$value" = "$local_system" ]]; then
+          (( negate )) && delta=-1 || delta=2
+        else
+          (( negate )) && delta=2
+        fi
         ;;
       d | distro)
-        [[ "${value// /_}" = "${local_distro// /_}" ]] && delta=4
+        if [[ "${value// /_}" = "${local_distro// /_}" ]]; then
+          (( negate )) && delta=-1 || delta=4
+        else
+          (( negate )) && delta=4
+        fi
         ;;
       f | distro_family)
-        [[ "${value// /_}" = "${local_distro_family// /_}" ]] && delta=8
+        if [[ "${value// /_}" = "${local_distro_family// /_}" ]]; then
+          (( negate )) && delta=-1 || delta=8
+        else
+          (( negate )) && delta=8
+        fi
         ;;
       c | class)
-        in_list "$value" "${local_classes[@]}" && delta=16
+        if in_list "$value" "${local_classes[@]}"; then
+          (( negate )) && delta=-1 || delta=16
+        else
+          (( negate )) && delta=16
+        fi
         ;;
       h | hostname)
-        [[ "$value" = "$local_host" ]] && delta=32
+        if [[ "$value" = "$local_host" ]]; then
+          (( negate )) && delta=-1 || delta=32
+        else
+          (( negate )) && delta=32
+        fi
         ;;
       u | user)
-        [[ "$value" = "$local_user" ]] && delta=64
+        if [[ "$value" = "$local_user" ]]; then
+          (( negate )) && delta=-1 || delta=64
+        else
+          (( negate )) && delta=64
+        fi
         ;;
       e | extension)
-        # extension isn't a condition and doesn't affect the score
         continue
         ;;
       t | template | yadm)
