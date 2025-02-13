@@ -336,9 +336,57 @@ def test_negative_class_condition(runner, yadm):
         score=0
         score_file "filename##!class.badclass" "dest"
         echo "score2: $score"
+        # Check class shorthand (c) as well.
+        score=0
+        score_file "filename##!c.testclass" "dest"
+        echo "score3: $score"
     """
     run = runner(command=["bash"], inp=script)
     assert run.success
     output = run.out.strip().splitlines()
     assert output[0] == "score: 0"
     assert output[1] == "score2: 1016"
+    assert output[2] == "score3: 0"
+
+def test_negative_combined_conditions(runner, yadm):
+    """Test negative conditions for multiple alt types: returns 0 when matching and proper score when not matching."""
+    script = f"""
+        YADM_TEST=1 source {yadm}
+        score=0
+        local_class="testclass"
+        local_classes=("testclass")
+        local_distro="testdistro"
+
+        # 0 + 0 = 0
+        score=0
+        score_file "filename##!class.testclass,!distro.testdistro" "dest"
+        echo "score: $score"
+
+        # 1000 * 2 + 16 + 4 = 2020
+        score=0
+        score_file "filename##class.testclass,distro.testdistro" "dest"
+        echo "score2: $score"
+
+        # 0 (negated class condition)
+        score=0
+        score_file "filename##!class.badclass,!distro.testdistro" "dest"
+        echo "score3: $score"
+
+        # 1000 + 16 + 1000 + 4 = 2020
+        score=0
+        score_file "filename##class.testclass,!distro.baddistro" "dest"
+        echo "score4: $score"
+
+        # 1000 + 16 + 1000 + 16 = 2032
+        score=0
+        score_file "filename##class.testclass,!class.badclass" "dest"
+        echo "score5: $score"
+    """
+    run = runner(command=["bash"], inp=script)
+    assert run.success
+    output = run.out.strip().splitlines()
+    assert output[0] == "score: 0"
+    assert output[1] == "score2: 2020"
+    assert output[2] == "score3: 0"
+    assert output[3] == "score4: 2020"
+    assert output[4] == "score5: 2032"
