@@ -179,9 +179,9 @@ function score_file() {
     local value=${field#*.}
     [ "$field" = "$label" ] && value="" # when .value is omitted
 
-    # Check for negative condition prefix (e.g., "!<label>")
+    # Check for negative condition prefix (e.g., "~<label>")
     local negate=0
-    if [[ "$label" == !* ]]; then
+    if [[ "$label" == ~* ]]; then
       negate=1
       label="${label:1}"
     fi
@@ -193,55 +193,28 @@ function score_file() {
         delta=0
         ;;
       a | arch)
-        if [[ "$value" = "$local_arch" ]]; then
-          (( negate )) && delta=-1 || delta=1
-        else
-          (( negate )) && delta=1
-        fi
+        [[ "$value" = "$local_arch" ]] && delta=1 || delta=-1
         ;;
       o | os)
-        if [[ "$value" = "$local_system" ]]; then
-          (( negate )) && delta=-1 || delta=2
-        else
-          (( negate )) && delta=2
-        fi
+        [[ "$value" = "$local_system" ]] && delta=2 || delta=-2
         ;;
       d | distro)
-        if [[ "${value// /_}" = "${local_distro// /_}" ]]; then
-          (( negate )) && delta=-1 || delta=4
-        else
-          (( negate )) && delta=4
-        fi
+        [[ "${value// /_}" = "${local_distro// /_}" ]] && delta=4 || delta=-4
         ;;
       f | distro_family)
-        if [[ "${value// /_}" = "${local_distro_family// /_}" ]]; then
-          (( negate )) && delta=-1 || delta=8
-        else
-          (( negate )) && delta=8
-        fi
+        [[ "${value// /_}" = "${local_distro_family// /_}" ]] && delta=8 || delta=-8
         ;;
       c | class)
-        if in_list "$value" "${local_classes[@]}"; then
-          (( negate )) && delta=-1 || delta=16
-        else
-          (( negate )) && delta=16
-        fi
+        in_list "$value" "${local_classes[@]}" && delta=16 || delta=-16
         ;;
       h | hostname)
-        if [[ "$value" = "$local_host" ]]; then
-          (( negate )) && delta=-1 || delta=32
-        else
-          (( negate )) && delta=32
-        fi
+        [[ "$value" = "$local_host" ]] && delta=32 || delta=-32
         ;;
       u | user)
-        if [[ "$value" = "$local_user" ]]; then
-          (( negate )) && delta=-1 || delta=64
-        else
-          (( negate )) && delta=64
-        fi
+        [[ "$value" = "$local_user" ]] && delta=64 || delta=-64
         ;;
       e | extension)
+        # extension isn't a condition and doesn't affect the score
         continue
         ;;
       t | template | yadm)
@@ -264,6 +237,7 @@ function score_file() {
     esac
     shopt -u nocasematch
 
+    (( negate )) && delta=$((-delta))
     if ((delta < 0)); then
       score=0
       return

@@ -329,16 +329,19 @@ def test_negative_class_condition(runner, yadm):
         score=0
         local_class="testclass"
         local_classes=("testclass")
-        # Negative condition with matching value should yield delta -1 and zero the score.
-        score_file "filename##!class.testclass" "dest"
+        
+        # 0
+        score_file "filename##~class.testclass" "dest"
         echo "score: $score"
-        # Negative condition with non-matching value should yield delta 16.
+
+        # 1000 + 16
         score=0
-        score_file "filename##!class.badclass" "dest"
+        score_file "filename##~class.badclass" "dest"
         echo "score2: $score"
-        # Check class shorthand (c) as well.
+
+        # 0
         score=0
-        score_file "filename##!c.testclass" "dest"
+        score_file "filename##~c.badclass" "dest"
         echo "score3: $score"
     """
     run = runner(command=["bash"], inp=script)
@@ -346,7 +349,7 @@ def test_negative_class_condition(runner, yadm):
     output = run.out.strip().splitlines()
     assert output[0] == "score: 0"
     assert output[1] == "score2: 1016"
-    assert output[2] == "score3: 0"
+    assert output[2] == "score3: 1016"
 
 def test_negative_combined_conditions(runner, yadm):
     """Test negative conditions for multiple alt types: returns 0 when matching and proper score when not matching."""
@@ -359,7 +362,7 @@ def test_negative_combined_conditions(runner, yadm):
 
         # 0 + 0 = 0
         score=0
-        score_file "filename##!class.testclass,!distro.testdistro" "dest"
+        score_file "filename##~class.testclass,~distro.testdistro" "dest"
         echo "score: $score"
 
         # 1000 * 2 + 16 + 4 = 2020
@@ -369,17 +372,17 @@ def test_negative_combined_conditions(runner, yadm):
 
         # 0 (negated class condition)
         score=0
-        score_file "filename##!class.badclass,!distro.testdistro" "dest"
+        score_file "filename##~class.badclass,~distro.testdistro" "dest"
         echo "score3: $score"
 
         # 1000 + 16 + 1000 + 4 = 2020
         score=0
-        score_file "filename##class.testclass,!distro.baddistro" "dest"
+        score_file "filename##class.testclass,~distro.baddistro" "dest"
         echo "score4: $score"
 
         # 1000 + 16 + 1000 + 16 = 2032
         score=0
-        score_file "filename##class.testclass,!class.badclass" "dest"
+        score_file "filename##class.testclass,~class.badclass" "dest"
         echo "score5: $score"
     """
     run = runner(command=["bash"], inp=script)
