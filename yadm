@@ -181,13 +181,13 @@ function score_file() {
 
     # Check for negative condition prefix (e.g., "~<label>")
     local negate=0
-    if [[ "$label" == ~* ]]; then
+    if [ "${label:0:1}" = "~" ]; then
       negate=1
       label="${label:1}"
     fi
 
     shopt -s nocasematch
-    local -i delta=-1
+    local -i delta=$(( negate ? 1 : -1 ))
     case "$label" in
       default)
         delta=0
