@@ -141,7 +141,7 @@ end of template
 
 INCLUDE_BASIC = "basic\n"
 INCLUDE_VARIABLES = """\
-included <{{ yadm.class }}> file
+included <{{ yadm.class }}> file ({{yadm.filename}})
 
 empty line above
 """
@@ -151,8 +151,8 @@ TEMPLATE_INCLUDE = """\
 The first line
 {% include empty %}
 An empty file removes the line above
-{%include basic%}
-{% include "./variables.{{ yadm.os }}"  %}
+{%include ./basic%}
+{% include "variables.{{ yadm.os }}"  %}
   {% include dir/nested %}
 Include basic again:
 {% include basic %}
@@ -161,7 +161,7 @@ EXPECTED_INCLUDE = f"""\
 The first line
 An empty file removes the line above
 basic
-included <{LOCAL_CLASS}> file
+included <{LOCAL_CLASS}> file (VARIABLES_FILENAME)
 
 empty line above
 no newline at the end
@@ -280,6 +280,8 @@ def test_include(runner, yadm, tmpdir):
     input_file.chmod(FILE_MODE)
     output_file = tmpdir.join("output")
 
+    expected = EXPECTED_INCLUDE.replace("VARIABLES_FILENAME", str(variables_file))
+
     script = f"""
         YADM_TEST=1 source {yadm}
         set_awk
@@ -290,7 +292,7 @@ def test_include(runner, yadm, tmpdir):
     run = runner(command=["bash"], inp=script)
     assert run.success
     assert run.err == ""
-    assert output_file.read() == EXPECTED_INCLUDE
+    assert output_file.read() == expected
     assert os.stat(output_file).st_mode == os.stat(input_file).st_mode
 
 

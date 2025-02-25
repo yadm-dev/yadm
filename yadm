@@ -379,7 +379,7 @@ BEGIN {
   yadm["user"] = user
   yadm["distro"] = distro
   yadm["distro_family"] = distro_family
-  yadm["source"] = source
+  yadm["source"] = ARGV[1]
 
   VARIABLE = "(env|yadm)\\.[a-zA-Z0-9_]+"
 
@@ -469,6 +469,9 @@ function replace_vars(input) {
     if (fields[1] == "env") {
       output = output ENVIRON[fields[2]]
     }
+    else if (fields[2] == "filename") {
+      output = output filename[current]
+    }
     else {
       output = output yadm[fields[2]]
     }
@@ -485,7 +488,6 @@ EOF
     -v user="$local_user" \
     -v distro="$local_distro" \
     -v distro_family="$local_distro_family" \
-    -v source="$input" \
     -v source_dir="$(builtin_dirname "$input")" \
     "$awk_pgm" \
     "$input" "${local_classes[@]}"
