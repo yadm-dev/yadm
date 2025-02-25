@@ -493,14 +493,12 @@ See the TEMPLATES section for more details.
 Valid if the value matches the current user.
 Current user is calculated by running
 .BR "id \-u \-n" .
-.BR [ weight\ = \ 64]
 .TP
 .BR hostname ,\  h
 Valid if the value matches the short hostname.
 Hostname is calculated by running
 .BR "uname \-n" ,
 and trimming off any domain.
-.BR [ weight\ = \ 32]
 .TP
 .BR class ,\  c
 Valid if the value matches the
@@ -510,7 +508,6 @@ Class must be manually set using
 .BR "yadm config local.class <class>" .
 See the CONFIGURATION section for more details about setting
 .BR local.class .
-.BR [ weight\ = \ 16]
 .TP
 .BR distro ,\  d
 Valid if the value matches the distro.
@@ -518,26 +515,22 @@ Distro is calculated by running
 .B "lsb_release \-si"
 or by inspecting the ID from
 .BR "/etc/os-release" .
-.BR [ weight\ = \ 8]
 .TP
 .BR distro_family ,\  f
 Valid if the value matches the distro family.
 Distro family is calculated by inspecting the ID_LIKE line from
 .B "/etc/os-release"
 (or ID if no ID_LIKE line is found).
-.BR [ weight\ = \ 4]
 .TP
 .BR os ,\  o
 Valid if the value matches the OS.
 OS is calculated by running
 .BR "uname \-s" .
-.BR [ weight\ = \ 2]
 .TP
 .BR arch ,\  a
 Valid if the value matches the architecture.
 Architecture is calculated by running
 .BR "uname \-m" .
-.BR [ weight\ = \ 1]
 .TP
 .B default
 Valid when no other alternate is valid.
@@ -614,55 +607,10 @@ Windows Subsystem for Linux, where the os is reported as WSL, the link will be:
 
 .IR $HOME/path/example.txt " -> " $HOME/path/example.txt##~os.Linux,~os.Darwin,~os.SunOS
 
-Negative conditions use the weight which corresponds to the attached attribute.
+Negative conditions use the same weight which corresponds to the attached attribute.
 
 If no "##default" version exists and no files have valid conditions, then no
 link will be created.
-
-Weighting for multiple valid alternatives is calculated using the weights specified
-above. For instance, on a Linux server named "host1" with class set to "Work", the
-alternatives will have the following weights:
-
-  - $HOME/path/example.txt##default
-  
-    Used if there are no other valid alternatives.
-
-  - $HOME/path/example.txt##class.Work
-  
-      1064 = (1000 + 64 (class)) * 1 (valid)
-
-  - $HOME/path/example.txt##os.Darwin
-  
-      0 = (1000 + 2 (os)) * 0 (invalid)
-
-  - $HOME/path/example.txt##os.Darwin,hostname.host1
-  
-      0 = (1000 + 2 (os) + 32 (hostname)) * 0 (invalid)
-
-  - $HOME/path/example.txt##os.Darwin,hostname.host2
-  
-      0 = (1000 + 2 (os) + 32 (hostname)) * 0 (invalid)
-
-  - $HOME/path/example.txt##os.Linux
-  
-      1002 = (1000 + 2 (os)) * 1 (valid)
-
-  - $HOME/path/example.txt##os.Linux,hostname.host1
-  
-      1034 = (1000 + 2 (os) + 32 (hostname)) * 1 (valid)
-
-  - $HOME/path/example.txt##os.Linux,hostname.host2
-  
-      1034 = (1000 + 2 (os) + 32 (hostname)) * 0 (invalid)
-
-  - $HOME/path/example.txt##~os.Linux,~os.Darwin,~os.SunOS
-
-      1006 = (1000 + 2 (~os) + 2 (~os) + 2 (~os)) * 0 (invalid)
-
-In this case, with a Linux server named "host1" with class set to "Work", the link will
-be:
-
-.IR $HOME/path/example.txt " -> " $HOME/path/example.txt##class.Work
 
 Links are also created for directories named this way, as long as they have at
 least one yadm managed file within them.
