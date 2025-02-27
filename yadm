@@ -242,7 +242,8 @@ function score_file() {
       score=0
       return
     fi
-    score=$((score + 1000 + delta))
+    (( negate )) || delta=$((delta + 1000))
+    score=$((score + delta))
   done
 
   record_score "$score" "$target" "$source" "$template_processor"
