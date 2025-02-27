@@ -218,6 +218,29 @@ def test_auto_alt(runner, yadm_cmd, paths, autoalt):
 
 
 @pytest.mark.usefixtures("ds1_copy")
+@pytest.mark.parametrize("autoexclude", [None, "true", "false"])
+def test_alt_exclude(runner, yadm_cmd, paths, autoexclude):
+    """Test alt exclude"""
+
+    # set the value of auto-exclude
+    if autoexclude:
+        os.system(" ".join(yadm_cmd("config", "yadm.auto-exclude", autoexclude)))
+
+    utils.create_alt_files(paths, "##default")
+    run = runner(yadm_cmd("alt", "-d"))
+    assert run.success
+
+    run = runner(yadm_cmd("status", "-z", "-uall", "--ignored"))
+    assert run.success
+    assert run.err == ""
+    status = run.out.split("\0")
+
+    for link_path in TEST_PATHS:
+        flags = "??" if autoexclude == "false" else "!!"
+        assert f"{flags} {link_path}" in status
+
+
+@pytest.mark.usefixtures("ds1_copy")
 def test_stale_link_removal(runner, yadm_cmd, paths):
     """Stale links to alternative files are removed
 

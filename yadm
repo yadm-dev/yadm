@@ -691,6 +691,11 @@ function set_local_alt_values() {
 }
 
 function alt_linking() {
+  local -a exclude=()
+
+  local log="debug"
+  [ -n "$loud" ] && log="echo"
+
   local -i index
   for ((index = 0; index < ${#alt_targets[@]}; ++index)); do
     local target="${alt_targets[$index]}"
@@ -709,17 +714,17 @@ function alt_linking() {
     if [[ -n "$template_processor" ]]; then
       template "$template_processor" "$source" "$target"
     elif [[ "$do_copy" -eq 1 ]]; then
-      debug "Copying $source to $target"
-      [[ -n "$loud" ]] && echo "Copying $source to $target"
-
+      $log "Copying $source to $target"
       cp -f "$source" "$target"
     else
-      debug "Linking $source to $target"
-      [[ -n "$loud" ]] && echo "Linking $source to $target"
-
+      $log "Linking $source to $target"
       ln_relative "$source" "$target"
     fi
+
+    exclude+=("${target#"$YADM_WORK"}")
   done
+
+  update_exclude alt "${exclude[@]}"
 }
 
 function ln_relative() {
@@ -1473,48 +1478,41 @@ function version() {
 
 # ****** Utility Functions ******
 
-function exclude_encrypted() {
+function update_exclude() {
 
   local auto_exclude
   auto_exclude=$(config --bool yadm.auto-exclude)
   [ "$auto_exclude" == "false" ] && return 0
 
-  # do nothing if there is no YADM_ENCRYPT
-  [ -e "$YADM_ENCRYPT" ] || return 0
+  local exclude_path="${YADM_REPO}/info/exclude"
+  local newline=$'\n'
 
-  readonly exclude_path="${YADM_REPO}/info/exclude"
-  readonly newline=$'\n'
-  readonly exclude_flag="# yadm-auto-excludes"
+  local part_path="$exclude_path.yadm-$1"
+  local part_str
+  part_str=$(join_string "$newline" "${@:2}")
+
+  if [ -e "$part_path" ]; then
+    if [ "$part_str" = "$(<"$part_path")" ]; then
+      return
+    fi
+
+    rm -f "$part_path"
+  elif [ -z "$part_str" ]; then
+    return
+  fi
+
+  if [ -n "$part_str" ]; then
+    assert_parent "$part_path"
+    cat >"$part_path" <<<"$part_str"
+  fi
+
+  local exclude_flag="# yadm-auto-excludes"
 
   local exclude_header="${exclude_flag}${newline}"
   exclude_header="${exclude_header}# This section is managed by yadm."
   exclude_header="${exclude_header}${newline}"
   exclude_header="${exclude_header}# Any edits below will be lost."
   exclude_header="${exclude_header}${newline}"
-
-  # read encrypt
-  local encrypt_data=""
-  local pattern
-  while IFS='' read -r pattern || [ -n "$pattern" ]; do
-    case ${pattern:0:1} in
-      \#)
-        pattern=""
-        ;;
-      !)
-        # Prepend / to the pattern so that it matches the same files as in
-        # parse_encrypt (i.e. only from the root)
-        pattern="!/${pattern:1}$newline"
-        ;;
-      *)
-        if ! [[ $pattern =~ ^[[:blank:]]*(#|$) ]]; then
-          pattern="/$pattern$newline"
-        else
-          pattern=""
-        fi
-        ;;
-    esac
-    encrypt_data="${encrypt_data}${pattern}"
-  done <"$YADM_ENCRYPT"
 
   # read info/exclude
   local unmanaged=""
@@ -1532,14 +1530,39 @@ function exclude_encrypted() {
     done <"$exclude_path"
   fi
 
-  if [ "${exclude_header}${encrypt_data}" != "$managed" ]; then
+  local exclude_str=""
+  for suffix in alt encrypt; do
+    if [ -e "${exclude_path}.yadm-$suffix" ]; then
+      local header="# yadm $suffix$newline"
+      exclude_str="$exclude_str$header$(<"$exclude_path".yadm-"$suffix")"
+    fi
+  done
+
+  if [ "${exclude_header}${exclude_str}${newline}" != "$managed" ]; then
     debug "Updating ${exclude_path}"
-    assert_parent "$exclude_path"
-    printf "%s" "${unmanaged}${exclude_header}${encrypt_data}" >"$exclude_path"
+    cat >"$exclude_path" <<<"${unmanaged}${exclude_header}${exclude_str}"
   fi
 
   return 0
+}
 
+function exclude_encrypted() {
+  local -a exclude=()
+
+  if [ -r "$YADM_ENCRYPT" ]; then
+    local pattern
+    while IFS='' read -r pattern || [ -n "$pattern" ]; do
+      # Prepend / to the pattern so that it matches the same files as in
+      # parse_encrypt (i.e. only from the root)
+      if [ "${pattern:0:1}" = "!" ]; then
+        exclude+=("!/${pattern:1}")
+      elif ! [[ $pattern =~ ^[[:blank:]]*(#|$) ]]; then
+        exclude+=("/$pattern")
+      fi
+    done <"$YADM_ENCRYPT"
+  fi
+
+  update_exclude encrypt "${exclude[@]}"
 }
 
 function query_distro() {
@@ -1956,19 +1979,11 @@ function parse_encrypt() {
 
   local pattern
   while IFS='' read -r pattern || [ -n "$pattern" ]; do
-    case ${pattern:0:1} in
-      \#)
-        # Ignore comments
-        ;;
-      !)
-        exclude+=("--exclude=/${pattern:1}")
-        ;;
-      *)
-        if ! [[ $pattern =~ ^[[:blank:]]*(#|$) ]]; then
-          include+=("$pattern")
-        fi
-        ;;
-    esac
+    if [ "${pattern:0:1}" = "!" ]; then
+      exclude+=("--exclude=/${pattern:1}")
+    elif ! [[ $pattern =~ ^[[:blank:]]*(#|$) ]]; then
+      include+=("$pattern")
+    fi
   done <"$YADM_ENCRYPT"
 
   if [ ${#include[@]} -gt 0 ]; then

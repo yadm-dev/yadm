@@ -9,7 +9,12 @@ import pytest
 def test_exclude_encrypted(runner, tmpdir, yadm, encrypt_exists, auto_exclude, exclude):
     """Test exclude_encrypted()"""
 
-    header = "# yadm-auto-excludes\n# This section is managed by yadm.\n# Any edits below will be lost.\n"
+    header = """\
+# yadm-auto-excludes
+# This section is managed by yadm.
+# Any edits below will be lost.
+# yadm encrypt
+"""
 
     config_function = 'function config() { echo "false";}'
     if auto_exclude:
