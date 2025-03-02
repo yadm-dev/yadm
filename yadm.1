@@ -476,9 +476,11 @@ commas.
 
 Each condition is an attribute/value pair, separated by a period. Some
 conditions do not require a "value", and in that case, the period and value can
-be omitted. Most attributes can be abbreviated as a single letter.
+be omitted. Most attributes can be abbreviated as a single letter. Prefixing an
+attribute with "~" negates the condition, meaning the condition is considered
+only if the attribute/value pair evaluates to false.
 
-  <attribute>[.<value>]
+  [~]<attribute>[.<value>]
 
 .BR NOTE :
 Value is compared case-insensitive.
@@ -555,9 +557,10 @@ symbolic links will be created for the most appropriate version.
 
 The "most appropriate" version is determined by calculating a score for each
 version of a file. A template is always scored higher than any symlink
-condition. The number of conditions is the next largest factor in scoring.
-Files with more conditions will always be favored. Any invalid condition will
-disqualify that file completely.
+condition. The number of conditions is the next largest factor in scoring;
+files with more conditions will always be favored. Negative conditions (prefixed
+with "~") are scored only relative to the number of non-negated conditions.
+Any invalid condition will disqualify that file completely.
 
 If you don't care to have all versions of alternates stored in the same
 directory as the generated symlink, you can place them in the
@@ -576,6 +579,7 @@ files are managed by yadm's repository:
   - $HOME/path/example.txt##os.Linux
   - $HOME/path/example.txt##os.Linux,hostname.host1
   - $HOME/path/example.txt##os.Linux,hostname.host2
+  - $HOME/path/example.txt##class.Work,~os.Darwin
 
 If running on a Macbook named "host2",
 yadm will create a symbolic link which looks like this:
@@ -598,9 +602,17 @@ If running on a Solaris server, the link will use the default version:
 
 .IR $HOME/path/example.txt " -> " $HOME/path/example.txt##default
 
-If running on a system, with class set to "Work", the link will be:
+If running on a Macbook with class set to "Work", the link will be:
 
 .IR $HOME/path/example.txt " -> " $HOME/path/example.txt##class.Work
+
+Negative conditions are supported via the "~" prefix. If again running on a system
+with class set to "Work", but instead within Windows Subsystem for Linux, where the
+os is reported as WSL, the link will be:
+
+.IR $HOME/path/example.txt " -> " $HOME/path/example.txt##class.Work,~os.Darwin
+
+Negative conditions use the same weight which corresponds to the attached attribute.
 
 If no "##default" version exists and no files have valid conditions, then no
 link will be created.

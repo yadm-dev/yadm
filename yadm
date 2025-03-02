@@ -180,32 +180,39 @@ function score_file() {
     local value=${field#*.}
     [ "$field" = "$label" ] && value="" # when .value is omitted
 
+    # Check for negative condition prefix (e.g., "~<label>")
+    local negate=0
+    if [ "${label:0:1}" = "~" ]; then
+      negate=1
+      label="${label:1}"
+    fi
+
     shopt -s nocasematch
-    local -i delta=-1
+    local -i delta=$((negate ? 1 : -1))
     case "$label" in
       default)
         delta=0
         ;;
       a | arch)
-        [[ "$value" = "$local_arch" ]] && delta=1
+        [[ "$value" = "$local_arch" ]] && delta=1 || delta=-1
         ;;
       o | os)
-        [[ "$value" = "$local_system" ]] && delta=2
+        [[ "$value" = "$local_system" ]] && delta=2 || delta=-2
         ;;
       d | distro)
-        [[ "${value// /_}" = "${local_distro// /_}" ]] && delta=4
+        [[ "${value// /_}" = "${local_distro// /_}" ]] && delta=4 || delta=-4
         ;;
       f | distro_family)
-        [[ "${value// /_}" = "${local_distro_family// /_}" ]] && delta=8
+        [[ "${value// /_}" = "${local_distro_family// /_}" ]] && delta=8 || delta=-8
         ;;
       c | class)
-        in_list "$value" "${local_classes[@]}" && delta=16
+        in_list "$value" "${local_classes[@]}" && delta=16 || delta=-16
         ;;
       h | hostname)
-        [[ "$value" = "$local_host" ]] && delta=32
+        [[ "$value" = "$local_host" ]] && delta=32 || delta=-32
         ;;
       u | user)
-        [[ "$value" = "$local_user" ]] && delta=64
+        [[ "$value" = "$local_user" ]] && delta=64 || delta=-64
         ;;
       e | extension)
         # extension isn't a condition and doesn't affect the score
@@ -231,11 +238,13 @@ function score_file() {
     esac
     shopt -u nocasematch
 
+    ((negate)) && delta=$((-delta))
     if ((delta < 0)); then
       score=0
       return
     fi
-    score=$((score + 1000 + delta))
+    ((negate)) || delta=$((delta + 1000))
+    score=$((score + delta))
   done
 
   record_score "$score" "$target" "$source" "$template_processor"
