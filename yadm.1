@@ -512,18 +512,18 @@ Class must be manually set using
 See the CONFIGURATION section for more details about setting
 .BR local.class .
 .TP
+.BR distro_family ,\  f
+Valid if the value matches the distro family.
+Distro family is calculated by inspecting the ID_LIKE line from
+.B "/etc/os-release"
+(or ID if no ID_LIKE line is found).
+.TP
 .BR distro ,\  d
 Valid if the value matches the distro.
 Distro is calculated by running
 .B "lsb_release \-si"
 or by inspecting the ID from
 .BR "/etc/os-release" .
-.TP
-.BR distro_family ,\  f
-Valid if the value matches the distro family.
-Distro family is calculated by inspecting the ID_LIKE line from
-.B "/etc/os-release"
-(or ID if no ID_LIKE line is found).
 .TP
 .BR os ,\  o
 Valid if the value matches the OS.
@@ -573,13 +573,13 @@ files are managed by yadm's repository:
 
   - $HOME/path/example.txt##default
   - $HOME/path/example.txt##class.Work
+  - $HOME/path/example.txt##class.Work,~os.Darwin
   - $HOME/path/example.txt##os.Darwin
   - $HOME/path/example.txt##os.Darwin,hostname.host1
   - $HOME/path/example.txt##os.Darwin,hostname.host2
   - $HOME/path/example.txt##os.Linux
   - $HOME/path/example.txt##os.Linux,hostname.host1
   - $HOME/path/example.txt##os.Linux,hostname.host2
-  - $HOME/path/example.txt##class.Work,~os.Darwin
 
 If running on a Macbook named "host2",
 yadm will create a symbolic link which looks like this:
@@ -606,13 +606,12 @@ If running on a Macbook with class set to "Work", the link will be:
 
 .IR $HOME/path/example.txt " -> " $HOME/path/example.txt##class.Work
 
-Negative conditions are supported via the "~" prefix. If again running on a system
-with class set to "Work", but instead within Windows Subsystem for Linux, where the
-os is reported as WSL, the link will be:
+Since class has higher precedence than os, this version is chosen.
+
+If running on a system with class set to "Work", but instead within Windows
+Subsystem for Linux, where the os is reported as WSL, the link will be:
 
 .IR $HOME/path/example.txt " -> " $HOME/path/example.txt##class.Work,~os.Darwin
-
-Negative conditions use the same weight which corresponds to the attached attribute.
 
 If no "##default" version exists and no files have valid conditions, then no
 link will be created.

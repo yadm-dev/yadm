@@ -191,7 +191,11 @@ function score_file() {
     local -i delta=$((negate ? 1 : -1))
     case "$label" in
       default)
-        delta=0
+        if ((negate)); then
+          INVALID_ALT+=("$source")
+        else
+          delta=0
+        fi
         ;;
       a | arch)
         [[ "$value" = "$local_arch" ]] && delta=1 || delta=-1
@@ -219,7 +223,7 @@ function score_file() {
         continue
         ;;
       t | template | yadm)
-        if [ -d "$source" ]; then
+        if [ -d "$source" ] || ((negate)); then
           INVALID_ALT+=("$source")
         else
           template_processor=$(choose_template_processor "$value")
@@ -243,8 +247,7 @@ function score_file() {
       score=0
       return
     fi
-    ((negate)) || delta=$((delta + 1000))
-    score=$((score + delta))
+    score=$((score + delta + (negate ? 0 : 1000)))
   done
 
   record_score "$score" "$target" "$source" "$template_processor"
