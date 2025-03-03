@@ -22,7 +22,7 @@ if [ -z "$BASH_VERSION" ]; then
   [ "$YADM_TEST" != 1 ] && exec bash "$0" "$@"
 fi
 
-VERSION=3.4.0
+VERSION=3.5.0
 
 YADM_WORK="$HOME"
 YADM_DIR=
@@ -61,6 +61,7 @@ PROC_VERSION="/proc/version"
 OPERATING_SYSTEM="Unknown"
 
 ENCRYPT_INCLUDE_FILES="unparsed"
+NO_ENCRYPT_TRACKED_FILES=()
 
 LEGACY_WARNING_ISSUED=0
 INVALID_ALT=()
@@ -179,39 +180,50 @@ function score_file() {
     local value=${field#*.}
     [ "$field" = "$label" ] && value="" # when .value is omitted
 
+    # Check for negative condition prefix (e.g., "~<label>")
+    local negate=0
+    if [ "${label:0:1}" = "~" ]; then
+      negate=1
+      label="${label:1}"
+    fi
+
     shopt -s nocasematch
-    local -i delta=-1
+    local -i delta=$((negate ? 1 : -1))
     case "$label" in
       default)
-        delta=0
+        if ((negate)); then
+          INVALID_ALT+=("$source")
+        else
+          delta=0
+        fi
         ;;
       a | arch)
-        [[ "$value" = "$local_arch" ]] && delta=1
+        [[ "$value" = "$local_arch" ]] && delta=1 || delta=-1
         ;;
       o | os)
-        [[ "$value" = "$local_system" ]] && delta=2
+        [[ "$value" = "$local_system" ]] && delta=2 || delta=-2
         ;;
       d | distro)
-        [[ "${value// /_}" = "${local_distro// /_}" ]] && delta=4
+        [[ "${value// /_}" = "${local_distro// /_}" ]] && delta=4 || delta=-4
         ;;
       f | distro_family)
-        [[ "${value// /_}" = "${local_distro_family// /_}" ]] && delta=8
+        [[ "${value// /_}" = "${local_distro_family// /_}" ]] && delta=8 || delta=-8
         ;;
       c | class)
-        in_list "$value" "${local_classes[@]}" && delta=16
+        in_list "$value" "${local_classes[@]}" && delta=16 || delta=-16
         ;;
       h | hostname)
-        [[ "$value" = "$local_host" ]] && delta=32
+        [[ "$value" = "$local_host" ]] && delta=32 || delta=-32
         ;;
       u | user)
-        [[ "$value" = "$local_user" ]] && delta=64
+        [[ "$value" = "$local_user" ]] && delta=64 || delta=-64
         ;;
       e | extension)
         # extension isn't a condition and doesn't affect the score
         continue
         ;;
       t | template | yadm)
-        if [ -d "$source" ]; then
+        if [ -d "$source" ] || ((negate)); then
           INVALID_ALT+=("$source")
         else
           template_processor=$(choose_template_processor "$value")
@@ -230,11 +242,12 @@ function score_file() {
     esac
     shopt -u nocasematch
 
+    ((negate)) && delta=$((-delta))
     if ((delta < 0)); then
       score=0
       return
     fi
-    score=$((score + 1000 + delta))
+    score=$((score + delta + (negate ? 0 : 1000)))
   done
 
   record_score "$score" "$target" "$source" "$template_processor"
@@ -366,7 +379,7 @@ BEGIN {
   yadm["user"] = user
   yadm["distro"] = distro
   yadm["distro_family"] = distro_family
-  yadm["source"] = source
+  yadm["source"] = ARGV[1]
 
   VARIABLE = "(env|yadm)\\.[a-zA-Z0-9_]+"
 
@@ -456,6 +469,9 @@ function replace_vars(input) {
     if (fields[1] == "env") {
       output = output ENVIRON[fields[2]]
     }
+    else if (fields[2] == "filename") {
+      output = output filename[current]
+    }
     else {
       output = output yadm[fields[2]]
     }
@@ -472,7 +488,6 @@ EOF
     -v user="$local_user" \
     -v distro="$local_distro" \
     -v distro_family="$local_distro_family" \
-    -v source="$input" \
     -v source_dir="$(builtin_dirname "$input")" \
     "$awk_pgm" \
     "$input" "${local_classes[@]}"
@@ -690,6 +705,11 @@ function set_local_alt_values() {
 }
 
 function alt_linking() {
+  local -a exclude=()
+
+  local log="debug"
+  [ -n "$loud" ] && log="echo"
+
   local -i index
   for ((index = 0; index < ${#alt_targets[@]}; ++index)); do
     local target="${alt_targets[$index]}"
@@ -708,17 +728,17 @@ function alt_linking() {
     if [[ -n "$template_processor" ]]; then
       template "$template_processor" "$source" "$target"
     elif [[ "$do_copy" -eq 1 ]]; then
-      debug "Copying $source to $target"
-      [[ -n "$loud" ]] && echo "Copying $source to $target"
-
+      $log "Copying $source to $target"
       cp -f "$source" "$target"
     else
-      debug "Linking $source to $target"
-      [[ -n "$loud" ]] && echo "Linking $source to $target"
-
+      $log "Linking $source to $target"
       ln_relative "$source" "$target"
     fi
+
+    exclude+=("${target#"$YADM_WORK"}")
   done
+
+  update_exclude alt "${exclude[@]}"
 }
 
 function ln_relative() {
@@ -1041,6 +1061,12 @@ function encrypt() {
   echo "Encrypting the following files:"
   printf '%s\n' "${ENCRYPT_INCLUDE_FILES[@]}"
   echo
+
+  if [ ${#NO_ENCRYPT_TRACKED_FILES[@]} -gt 0 ]; then
+    echo "Warning: The following files are tracked and will NOT be encrypted:"
+    printf '%s\n' "${NO_ENCRYPT_TRACKED_FILES[@]}"
+    echo
+  fi
 
   # encrypt all files which match the globs
   if tar -f - -c "${ENCRYPT_INCLUDE_FILES[@]}" | _encrypt_to "$YADM_ARCHIVE"; then
@@ -1466,52 +1492,91 @@ function version() {
 
 # ****** Utility Functions ******
 
-function exclude_encrypted() {
+function update_exclude() {
 
+  local auto_exclude
   auto_exclude=$(config --bool yadm.auto-exclude)
   [ "$auto_exclude" == "false" ] && return 0
 
-  exclude_path="${YADM_REPO}/info/exclude"
-  newline=$'\n'
-  exclude_flag="# yadm-auto-excludes"
-  exclude_header="${exclude_flag}${newline}"
+  local exclude_path="${YADM_REPO}/info/exclude"
+  local newline=$'\n'
+
+  local part_path="$exclude_path.yadm-$1"
+  local part_str
+  part_str=$(join_string "$newline" "${@:2}")
+
+  if [ -e "$part_path" ]; then
+    if [ "$part_str" = "$(<"$part_path")" ]; then
+      return
+    fi
+
+    rm -f "$part_path"
+  elif [ -z "$part_str" ]; then
+    return
+  fi
+
+  if [ -n "$part_str" ]; then
+    assert_parent "$part_path"
+    cat >"$part_path" <<<"$part_str"
+  fi
+
+  local exclude_flag="# yadm-auto-excludes"
+
+  local exclude_header="${exclude_flag}${newline}"
   exclude_header="${exclude_header}# This section is managed by yadm."
   exclude_header="${exclude_header}${newline}"
   exclude_header="${exclude_header}# Any edits below will be lost."
   exclude_header="${exclude_header}${newline}"
 
-  # do nothing if there is no YADM_ENCRYPT
-  [ -e "$YADM_ENCRYPT" ] || return 0
-
-  # read encrypt
-  encrypt_data=""
-  while IFS='' read -r line || [ -n "$line" ]; do
-    encrypt_data="${encrypt_data}${line}${newline}"
-  done <"$YADM_ENCRYPT"
-
   # read info/exclude
-  unmanaged=""
-  managed=""
+  local unmanaged=""
+  local managed=""
   if [ -e "$exclude_path" ]; then
-    flag_seen=0
+    local -i flag_seen=0
+    local line
     while IFS='' read -r line || [ -n "$line" ]; do
       [ "$line" = "$exclude_flag" ] && flag_seen=1
-      if [ "$flag_seen" -eq 0 ]; then
-        unmanaged="${unmanaged}${line}${newline}"
-      else
+      if ((flag_seen)); then
         managed="${managed}${line}${newline}"
+      else
+        unmanaged="${unmanaged}${line}${newline}"
       fi
     done <"$exclude_path"
   fi
 
-  if [ "${exclude_header}${encrypt_data}" != "$managed" ]; then
+  local exclude_str=""
+  for suffix in alt encrypt; do
+    if [ -e "${exclude_path}.yadm-$suffix" ]; then
+      local header="# yadm $suffix$newline"
+      exclude_str="$exclude_str$header$(<"$exclude_path".yadm-"$suffix")"
+    fi
+  done
+
+  if [ "${exclude_header}${exclude_str}${newline}" != "$managed" ]; then
     debug "Updating ${exclude_path}"
-    assert_parent "$exclude_path"
-    printf "%s" "${unmanaged}${exclude_header}${encrypt_data}" >"$exclude_path"
+    cat >"$exclude_path" <<<"${unmanaged}${exclude_header}${exclude_str}"
   fi
 
   return 0
+}
 
+function exclude_encrypted() {
+  local -a exclude=()
+
+  if [ -r "$YADM_ENCRYPT" ]; then
+    local pattern
+    while IFS='' read -r pattern || [ -n "$pattern" ]; do
+      # Prepend / to the pattern so that it matches the same files as in
+      # parse_encrypt (i.e. only from the root)
+      if [ "${pattern:0:1}" = "!" ]; then
+        exclude+=("!/${pattern:1}")
+      elif ! [[ $pattern =~ ^[[:blank:]]*(#|$) ]]; then
+        exclude+=("/$pattern")
+      fi
+    done <"$YADM_ENCRYPT"
+  fi
+
+  update_exclude encrypt "${exclude[@]}"
 }
 
 function query_distro() {
@@ -1926,26 +1991,36 @@ function parse_encrypt() {
   local -a exclude
   local -a include
 
-  while IFS= read -r pattern; do
-    case $pattern in
-      \#*)
-        # Ignore comments
-        ;;
-      !*)
-        exclude+=("--exclude=${pattern:1}")
-        ;;
-      *)
-        if ! [[ $pattern =~ ^[[:blank:]]*$ ]]; then
-          include+=("$pattern")
-        fi
-        ;;
-    esac
+  local pattern
+  while IFS='' read -r pattern || [ -n "$pattern" ]; do
+    if [ "${pattern:0:1}" = "!" ]; then
+      exclude+=("--exclude=/${pattern:1}")
+    elif ! [[ $pattern =~ ^[[:blank:]]*(#|$) ]]; then
+      include+=("$pattern")
+    fi
   done <"$YADM_ENCRYPT"
 
-  if [[ ${#include} -gt 0 ]]; then
-    while IFS= read -r filename; do
-      ENCRYPT_INCLUDE_FILES+=("${filename%/}")
-    done <<<"$("$GIT_PROGRAM" ls-files --others "${exclude[@]}" -- "${include[@]}")"
+  if [ ${#include[@]} -gt 0 ]; then
+    while IFS='' read -r filename; do
+      if [ -n "$filename" ]; then
+        ENCRYPT_INCLUDE_FILES+=("${filename%/}")
+      fi
+    done <<<"$(
+      "$GIT_PROGRAM" --glob-pathspecs ls-files --others \
+        "${exclude[@]}" -- "${include[@]}" 2>/dev/null
+    )"
+
+    [ "$YADM_COMMAND" = "encrypt" ] || return
+
+    # List files that matches encryption pattern but is tracked
+    while IFS='' read -r filename; do
+      if [ -n "$filename" ]; then
+        NO_ENCRYPT_TRACKED_FILES+=("${filename%/}")
+      fi
+    done <<<"$(
+      "$GIT_PROGRAM" --glob-pathspecs ls-files \
+        "${exclude[@]}" -- "${include[@]}"
+    )"
   fi
 }
 

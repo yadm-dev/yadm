@@ -1,5 +1,5 @@
 .\" vim: set spell so=8:
-.TH YADM 1 "February 9, 2025" "3.4.0"
+.TH YADM 1 "March 3, 2025" "3.5.0"
 
 .SH NAME
 
@@ -363,7 +363,8 @@ you may still run "yadm alt" manually to create the alternate links. This
 feature is enabled by default.
 .TP
 .B yadm.auto-exclude
-Disable the automatic exclusion of patterns defined in
+Disable the automatic exclusion of created alternate links, template files and
+patterns defined in
 .IR $HOME/.config/yadm/encrypt .
 This feature is enabled by default.
 .TP
@@ -475,9 +476,11 @@ commas.
 
 Each condition is an attribute/value pair, separated by a period. Some
 conditions do not require a "value", and in that case, the period and value can
-be omitted. Most attributes can be abbreviated as a single letter.
+be omitted. Most attributes can be abbreviated as a single letter. Prefixing an
+attribute with "~" negates the condition, meaning the condition is considered
+only if the attribute/value pair evaluates to false.
 
-  <attribute>[.<value>]
+  [~]<attribute>[.<value>]
 
 .BR NOTE :
 Value is compared case-insensitive.
@@ -509,18 +512,18 @@ Class must be manually set using
 See the CONFIGURATION section for more details about setting
 .BR local.class .
 .TP
+.BR distro_family ,\  f
+Valid if the value matches the distro family.
+Distro family is calculated by inspecting the ID_LIKE line from
+.B "/etc/os-release"
+(or ID if no ID_LIKE line is found).
+.TP
 .BR distro ,\  d
 Valid if the value matches the distro.
 Distro is calculated by running
 .B "lsb_release \-si"
 or by inspecting the ID from
 .BR "/etc/os-release" .
-.TP
-.BR distro_family ,\  f
-Valid if the value matches the distro family.
-Distro family is calculated by inspecting the ID_LIKE line from
-.B "/etc/os-release"
-(or ID if no ID_LIKE line is found).
 .TP
 .BR os ,\  o
 Valid if the value matches the OS.
@@ -554,9 +557,10 @@ symbolic links will be created for the most appropriate version.
 
 The "most appropriate" version is determined by calculating a score for each
 version of a file. A template is always scored higher than any symlink
-condition. The number of conditions is the next largest factor in scoring.
-Files with more conditions will always be favored. Any invalid condition will
-disqualify that file completely.
+condition. The number of conditions is the next largest factor in scoring;
+files with more conditions will always be favored. Negative conditions (prefixed
+with "~") are scored only relative to the number of non-negated conditions.
+Any invalid condition will disqualify that file completely.
 
 If you don't care to have all versions of alternates stored in the same
 directory as the generated symlink, you can place them in the
@@ -569,6 +573,7 @@ files are managed by yadm's repository:
 
   - $HOME/path/example.txt##default
   - $HOME/path/example.txt##class.Work
+  - $HOME/path/example.txt##class.Work,~os.Darwin
   - $HOME/path/example.txt##os.Darwin
   - $HOME/path/example.txt##os.Darwin,hostname.host1
   - $HOME/path/example.txt##os.Darwin,hostname.host2
@@ -597,9 +602,16 @@ If running on a Solaris server, the link will use the default version:
 
 .IR $HOME/path/example.txt " -> " $HOME/path/example.txt##default
 
-If running on a system, with class set to "Work", the link will be:
+If running on a Macbook with class set to "Work", the link will be:
 
 .IR $HOME/path/example.txt " -> " $HOME/path/example.txt##class.Work
+
+Since class has higher precedence than os, this version is chosen.
+
+If running on a system with class set to "Work", but instead within Windows
+Subsystem for Linux, where the os is reported as WSL, the link will be:
+
+.IR $HOME/path/example.txt " -> " $HOME/path/example.txt##class.Work,~os.Darwin
 
 If no "##default" version exists and no files have valid conditions, then no
 link will be created.
@@ -613,6 +625,12 @@ using the
 configuration.
 Even if disabled, links can be manually created by running
 .BR "yadm alt" .
+
+Created links are automatically added to the repository's
+.I info/exclude
+file. This can be disabled using the
+.I yadm.auto-exclude
+configuration.
 
 Class is a special value which is stored locally on each host (inside the local
 repository). To use alternate symlinks using class, you must set the value of
@@ -687,6 +705,7 @@ During processing, the following variables are available in the template:
  yadm.classes         YADM_CLASSES         All classes
  yadm.distro          YADM_DISTRO          lsb_release \-si
  yadm.distro_family   YADM_DISTRO_FAMILY   ID_LIKE from /etc/os-release
+ yadm.filename                             Filename for the current file
  yadm.hostname        YADM_HOSTNAME        uname \-n (without domain)
  yadm.os              YADM_OS              uname \-s
  yadm.source          YADM_SOURCE          Template filename
@@ -747,6 +766,12 @@ would look like:
   config=dev-whatever
   <%+ whatever.extra %>
   <% fi -%>
+
+Created files are automatically added to the repository's
+.I info/exclude
+file. This can be disabled using the
+.I yadm.auto-exclude
+configuration.
 
 .SH ENCRYPTION
 

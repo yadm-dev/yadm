@@ -1,3 +1,12 @@
+3.5.0
+  * Silence warnings when collecting alt files (#521)
+  * Adjust handling of encrypt patterns to match 3.3.0 and older
+  * Make encrypt exclude patterns only match encrypted files
+  * Automatically exclude alt and template files (#234)
+  * Support negative alt conditions (#365)
+  * Handle filenames with space in bash completion (#341)
+  * Add new yadm.filename template variable (#520)
+
 3.4.0
   * Improve and harden alt file regeneration (#466)
   * Fix "yadm config" in fish completion (#491)

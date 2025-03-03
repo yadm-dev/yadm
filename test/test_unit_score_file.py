@@ -321,3 +321,76 @@ def test_underscores_and_upper_case_in_distro_and_family(runner, yadm):
     assert run.success
     assert run.err == ""
     assert run.out == expected
+
+
+def test_negative_class_condition(runner, yadm):
+    """Test negative class condition: returns 0 when matching and proper score when not matching."""
+    script = f"""
+        YADM_TEST=1 source {yadm}
+        local_class="testclass"
+        local_classes=("testclass")
+
+        # 0
+        score=0
+        score_file "filename##~class.testclass" "dest"
+        echo "score: $score"
+
+        # 16
+        score=0
+        score_file "filename##~class.badclass" "dest"
+        echo "score2: $score"
+
+        # 16
+        score=0
+        score_file "filename##~c.badclass" "dest"
+        echo "score3: $score"
+    """
+    run = runner(command=["bash"], inp=script)
+    assert run.success
+    output = run.out.strip().splitlines()
+    assert output[0] == "score: 0"
+    assert output[1] == "score2: 16"
+    assert output[2] == "score3: 16"
+
+
+def test_negative_combined_conditions(runner, yadm):
+    """Test negative conditions for multiple alt types: returns 0 when matching and proper score when not matching."""
+    script = f"""
+        YADM_TEST=1 source {yadm}
+        local_class="testclass"
+        local_classes=("testclass")
+        local_distro="testdistro"
+
+        # (0) + (0) = 0
+        score=0
+        score_file "filename##~class.testclass,~distro.testdistro" "dest"
+        echo "score: $score"
+
+        # (1000 + 16) + (1000 + 4) = 2020
+        score=0
+        score_file "filename##class.testclass,distro.testdistro" "dest"
+        echo "score2: $score"
+
+        # 0 (negated class condition)
+        score=0
+        score_file "filename##~class.badclass,~distro.testdistro" "dest"
+        echo "score3: $score"
+
+        # (1000 + 16) + (4) = 1020
+        score=0
+        score_file "filename##class.testclass,~distro.baddistro" "dest"
+        echo "score4: $score"
+
+        # (1000 + 16) + (16) = 1032
+        score=0
+        score_file "filename##class.testclass,~class.badclass" "dest"
+        echo "score5: $score"
+    """
+    run = runner(command=["bash"], inp=script)
+    assert run.success
+    output = run.out.strip().splitlines()
+    assert output[0] == "score: 0"
+    assert output[1] == "score2: 2020"
+    assert output[2] == "score3: 0"
+    assert output[3] == "score4: 1020"
+    assert output[4] == "score5: 1032"

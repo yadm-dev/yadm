@@ -123,6 +123,7 @@ testhost: require-docker .testyadm
 		--hostname testhost \
 		--rm -it \
 		-v "$(CURDIR)/.testyadm:/bin/yadm:ro" \
+		-v "$(CURDIR)/completion/bash/yadm:/usr/share/bash-completion/completions/yadm:ro" \
 		$(IMAGE) \
 		bash -l
 
