@@ -26,18 +26,21 @@ conditions do not require a "value", and in that case, the period and value can
 be omitted. Most attributes can be abbreviated as a single letter. Values are
 compared case-insensitive.
 
+Prefixing an attribute with "~" negates the condition, meaning the condition is
+considered only if the attribute/value pair evaluates to false.
+
 | Attribute | Meaning |
 | - | - |
-| `arch`, `a` | Valid if the value matches the architecture. Architecture is calculated by running <code>uname&nbsp;&#8209;m</code>. |
-| `class`, `c` | Valid if the value matches the local.class configuration. Class must be manually set using <code>yadm&nbsp;config&nbsp;local.class&nbsp;&lt;class&gt;</code>. |
+| `arch`, `a` | Valid if the value matches the architecture. Architecture is calculated by running `uname -m`. |
+| `class`, `c` | Valid if the value matches the local.class configuration. Class must be manually set using `yadm config local.class <class>`. |
 | `default` | Valid when no other alternate is valid. |
-| `distro`, `d` | Valid if the value matches the distro. Distro is calculated by running <code>lsb_release&nbsp;&#8209;si</code> or inspecting `ID` from <code>/etc/os-release</code> |
-| `distro_family`, `f` | Valid if the value matches the distro family. Distro family is calculated by inspecting `ID_LIKE` from <code>/etc/os-release</code> (or `ID` if `ID_LIKE` isn't found) |
+| `distro`, `d` | Valid if the value matches the distro. Distro is calculated by running `lsb_release -si` or inspecting `ID` from `/etc/os-release`. |
+| `distro_family`, `f` | Valid if the value matches the distro family. Distro family is calculated by inspecting `ID_LIKE` from `/etc/os-release` (or `ID` if `ID_LIKE` isn't found). |
 | `extension`, `e` | A special "condition" that doesn't affect the selection process. Its purpose is instead to allow the alternate file to end with a certain extension to e.g. make editors highlight the content properly. |
-| `hostname`, `h` | Valid if the value matches the short hostname. Hostname is calculated by running <code>uname&nbsp;&#8209;n</code>, and trimming off any domain. |
-| `os`, `o` | Valid if the value matches the OS. OS is calculated by running <code>uname&nbsp;&#8209;s</code>. <sup>*</sup> |
+| `hostname`, `h` | Valid if the value matches the short hostname. Hostname is calculated by running `uname -n`, and trimming off any domain. |
+| `os`, `o` | Valid if the value matches the OS. OS is calculated by running `uname -s`. <sup>*</sup> |
 | `template`, `t` | Valid when the value matches a supported template processor. See the [Templates](/docs/templates) section for more details. |
-| `user`, `u` | Valid if the value matches the current user. Current user is calculated by running <code>id&nbsp;&#8209;u&nbsp;&#8209;n</code>. |
+| `user`, `u` | Valid if the value matches the current user. Current user is calculated by running `id -u -n`. |
 
 <sub><sup>*
 The OS for "Windows Subsystem for Linux" is reported as "WSL", even though uname identifies as "Linux".
@@ -54,8 +57,9 @@ symbolic links will be created for the most appropriate version.
 The "most appropriate" version is determined by calculating a score for each
 version of a file. A [template](/docs/templates) is always scored higher than
 any symlink condition. The number of conditions is the next largest factor in
-scoring. Files with more conditions will always be favored. Any invalid
-condition will disqualify that file completely.
+scoring. Files with more conditions will always be favored. Negative conditions
+(prefixed with "~") are scored only relative to the number of non-negated
+conditions. Any invalid condition will disqualify that file completely.
 
 If you don't care to have all versions of alternates stored in the same
 directory as the generated symlink, you can place them in the
@@ -67,6 +71,7 @@ files are managed by yadm's repository:
 
     $HOME/path/example.txt##default
     $HOME/path/example.txt##class.Work
+    $HOME/path/example.txt##class.Work,~os.Darwin
     $HOME/path/example.txt##os.Darwin
     $HOME/path/example.txt##os.Darwin,hostname.host1
     $HOME/path/example.txt##os.Darwin,hostname.host2
@@ -91,19 +96,27 @@ If running on a Solaris server, the link will use the default version:
 
 `$HOME/path/example.txt` → `$HOME/path/example.txt##default`
 
-If running on a system, with class set to `Work`, the link will be:
+If running on a Macbook, with class set to `Work`, the link will be:
 
 `$HOME/path/example.txt` → `$HOME/path/example.txt##class.Work`
+
+If running on a system with class set to `Work`, but instead within Windows
+Subsystem for Linux, where the os is reported as WSL, the link will be:
+
+`$HOME/path/example.txt` → `$HOME/path/example.txt##class.Work,~os.Darwin`
 
 If no `##default` version exists and no files have valid conditions, then no
 link will be created.
 
 Links are also created for directories named this way, as long as they have at
-least one yadm managed file within them (at the top level).
+least one yadm managed file within them.
 
 yadm will automatically create these links by default. This can be disabled
 using the `yadm.auto-alt` configuration. Even if disabled, links can be manually
 created by running `yadm alt`.
+
+Created links are automatically added to the repository's `info/exclude`
+file. This can be disabled using the `yadm.auto-exclude` configuration.
 
 ## Class and Overrides
 

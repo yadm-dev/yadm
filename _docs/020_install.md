@@ -44,6 +44,10 @@ zypper modifyrepo -p 100 utilities
 
 A version of yadm is available via standard package repositories. Use `apt-get` to install.
 
+```
+sudo apt-get install yadm
+```
+
 ## Arch Linux
 
 yadm is available in the official repository, simply use `pacman` to install it.

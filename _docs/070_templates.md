@@ -37,23 +37,25 @@ Also, `j2` will be processed by either j2cli or envtpl, whichever is found.
 When template processors run, they will be provided the following set of data.
 
 
-| Default (built-in)   | Jinja or ESH         | Description         | Source                                                                      |
-| -                    | -                    | -                   | -                                                                           |
-| `yadm.arch`          | `YADM_ARCH`          | Architecture        | <code>uname&nbsp;&#8209;m</code>                                            |
-| `yadm.class`         | `YADM_CLASS`         | Last defined class  | <code>yadm&nbsp;config&nbsp;local.class</code>                              |
-| `yadm.classes`       | `YADM_CLASSES`       | All classes         | <code>yadm&nbsp;config &#8209;&#8209;get&#8209;all&nbsp;local.class</code>  |
-| `yadm.distro`        | `YADM_DISTRO`        | Distribution        | <code>lsb_release&nbsp;&#8209;si</code><br/>or <code>/etc/os-release</code> |
-| `yadm.distro_family` | `YADM_DISTRO_FAMILY` | Distribution Family | `ID_LIKE` from<code>/etc/os&#8209;release</code>                            |
-| `yadm.hostname`      | `YADM_HOSTNAME`      | Hostname            | <code>uname&nbsp;&#8209;n</code> (without domain)                           |
-| `yadm.os`            | `YADM_OS`            | Operating system    | <code>uname&nbsp;&#8209;s</code> <sup>*</sup>                               |
-| `yadm.source`        | `YADM_SOURCE`        | Template filename   | (fully qualified path)                                                      |
-| `yadm.user`          | `YADM_USER`          | Current user        | <code>id&nbsp;&#8209;u&nbsp;&#8209;n</code>                                 |
-| `env.VAR`            |                      | Env variables       | Any VAR in the environment while yadm templates are processed               |
+| Default (built-in)   | Jinja or ESH         | Description         | Source                                                        |
+| -                    | -                    | -                   | -                                                             |
+| `yadm.arch`          | `YADM_ARCH`          | Architecture        | `uname -m`                                                    |
+| `yadm.class`         | `YADM_CLASS`         | Last defined class  | `yadm config local.class`                                     |
+| `yadm.classes`       | `YADM_CLASSES`       | All classes         | `yadm config --get-all local.class`                           |
+| `yadm.distro`        | `YADM_DISTRO`        | Distribution        | `lsb_release -si`<br/>or `/etc/os-release`                    |
+| `yadm.distro_family` | `YADM_DISTRO_FAMILY` | Distribution family | `ID_LIKE` from`/etc/os-release`                               |
+| `yadm.filename`      |                      | Current filename    | (fully qualified path) <sup>*</sup>                           |
+| `yadm.hostname`      | `YADM_HOSTNAME`      | Hostname            | `uname -n` (without domain)                                   |
+| `yadm.os`            | `YADM_OS`            | Operating system    | `uname -s` <sup>*</sup>                                       |
+| `yadm.source`        | `YADM_SOURCE`        | Template filename   | (fully qualified path)                                        |
+| `yadm.user`          | `YADM_USER`          | Current user        | `id -u -n`                                                    |
+| `env.VAR`            |                      | Env variables       | Any VAR in the environment while yadm templates are processed |
 
 <sub><sup>*
+Current filename differ from template filename in included files.
+<br/>*
 The OS for "Windows Subsystem for Linux" is reported as "WSL", even though uname identifies as "Linux".
-<br/>
-*
+<br/>*
 If `lsb_release` is not available, "distro" will be the ID specified in `/etc/os-release`.
 </sup></sub>
 
