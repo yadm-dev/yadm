@@ -7,7 +7,7 @@ minimal_mistakes_skin: default
 locale: en-US
 title: yadm
 title_separator: "-"
-name: Tim Byrne
+name: Tim Byrne, Erik Flodin
 description: Yet Another Dotfiles Manager
 url: https://yadm.io
 repository: yadm-dev/yadm
@@ -20,18 +20,6 @@ footer:
 
 atom_feed: false
 # path: false
-
-# Site Author
-author:
-  name: Tim Byrne
-  email: sultan@locehilios.com
-  links:
-    - label: Email
-      icon: fas fa-fw fa-envelope-square
-      url: mailto:sultan@locehilios.com
-    - label: GitHub
-      icon: fab fa-fw fa-github
-      url: https://github.com/TheLocehiliosan
 
 # Reading Files
 include:
