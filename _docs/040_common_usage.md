@@ -22,7 +22,7 @@ directory often more than only dotfiles, by default
 yadm ignores untracked files when displaying status.
 
 <i class="fab fa-fw fa-git-square" aria-hidden="true"></i> `yadm push`, `yadm fetch`
-: Send or retrive commits to/from your remote repository .
+: Send or retrieve commits to/from your remote repository .
 
 <i class="fab fa-fw fa-git-square" aria-hidden="true"></i> `yadm commit --amend`
 : Replace the last commit with a new one. Allows you to change your commit

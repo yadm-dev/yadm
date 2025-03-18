@@ -96,7 +96,7 @@ If running on a Solaris server, the link will use the default version:
 
 `$HOME/path/example.txt` → `$HOME/path/example.txt##default`
 
-If running on a Macbook, with class set to `Work`, the link will be:
+If running on a MacBook, with class set to `Work`, the link will be:
 
 `$HOME/path/example.txt` → `$HOME/path/example.txt##class.Work`
 
