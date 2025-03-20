@@ -739,6 +739,7 @@ with the following content
 
   {% if yadm.user == "harvey" %}
   config={{yadm.class}}-{{yadm.os}}
+  user={% command echo "{{ yadm.user }}" | tr a-z A-Z %}
   {% else %}
   config=dev-whatever
   {% include "whatever.extra" %}
@@ -749,6 +750,7 @@ would output a file named
 with the following content if the user is "harvey":
 
   config=work-Linux
+  user=HARVEY
 
 and the following otherwise (if
 .I whatever.extra
@@ -763,6 +765,7 @@ would look like:
 
   {% if YADM_USER == 'harvey' -%}
   config={{YADM_CLASS}}-{{YADM_OS}}
+  user={{ YADM_USER | upper }}
   {% else -%}
   config=dev-whatever
   {% include 'whatever.extra' %}
@@ -774,6 +777,7 @@ would look like:
 
   <% if [ "$YADM_USER" = "harvey" ]; then -%>
   config=<%= $YADM_CLASS %>-<%= $YADM_OS %>
+  user=<% echo "$YADM_USER" | tr a-z A-Z %>
   <% else -%>
   config=dev-whatever
   <%+ whatever.extra %>

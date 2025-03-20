@@ -436,7 +436,19 @@ BEGIN {
           filename[++current] = include
           line[current] = 0
         }
-        else { print }
+        else {
+          if (match($0, /\{%[ \t]*command[ \t]+/)) {
+            prefix = substr($0, 0, RSTART - 1)
+            command = substr($0, RSTART + RLENGTH)
+            if (match(command, /[ \t]*%\}/) && RSTART > 1) {
+              suffix = substr(command, RSTART + RLENGTH)
+              command = substr(command, 0, RSTART - 1)
+              command | getline
+              $0 = prefix $0 suffix
+            }
+          }
+          print
+        }
       }
     }
     if (res >= 0) { close(filename[current]) }

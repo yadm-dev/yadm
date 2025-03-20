@@ -1,5 +1,6 @@
 """Unit tests: template_default"""
 
+import hashlib
 import os
 
 FILE_MODE = 0o754
@@ -169,6 +170,18 @@ Include basic again:
 basic
 """
 
+TEMPLATE_COMMAND = """\
+sha1="{% command sha1sum "{{ yadm.filename }}" | cut -d' ' -f1 %}"
+{% command sha1sum "no endtag"
+{% command echo foobar | tr oa OA %}
+"""
+
+EXPECTED_COMMAND = """\
+sha1="{SHA1}"
+{{% command sha1sum "no endtag"
+fOObAr
+"""
+
 TEMPLATE_NESTED_IFS = """\
 {% if yadm.user == "me" %}
     print1
@@ -294,6 +307,26 @@ def test_include(runner, yadm, tmpdir):
     assert run.err == ""
     assert output_file.read() == expected
     assert os.stat(output_file).st_mode == os.stat(input_file).st_mode
+
+
+def test_command(runner, yadm, tmpdir):
+    """Test custom commands"""
+
+    input_file = tmpdir.join("input with space")
+    input_file.write(TEMPLATE_COMMAND, ensure=True)
+    output_file = tmpdir.join("output")
+
+    expected = EXPECTED_COMMAND.format(SHA1=hashlib.sha1(TEMPLATE_COMMAND.encode(), usedforsecurity=False).hexdigest())
+
+    script = f"""
+        YADM_TEST=1 source {yadm}
+        set_awk
+        template default "{input_file}" "{output_file}"
+    """
+    run = runner(command=["bash"], inp=script)
+    assert run.success
+    assert run.err == ""
+    assert output_file.read() == expected
 
 
 def test_nested_ifs(runner, yadm, tmpdir):

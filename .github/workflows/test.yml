@@ -43,6 +43,7 @@ jobs:
         if: ${{ runner.os == 'macOS' }}
         run: |
           command -v expect || brew install expect
+          command -v sha1sum || brew install md5sha1sum
 
       - name: Install dependencies on Windows (WSL)
         if: ${{ runner.os == 'Windows' }}
