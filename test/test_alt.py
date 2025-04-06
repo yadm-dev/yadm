@@ -248,7 +248,12 @@ def test_auto_alt(runner, yadm_cmd, paths, autoalt):
         os.system(" ".join(yadm_cmd("config", "yadm.auto-alt", autoalt)))
 
     utils.create_alt_files(paths, "##default")
-    run = runner(yadm_cmd("status"))
+
+    # Add and commit a file to trigger auto alt
+    paths.work.join("somefile").write("somedata")
+    runner(yadm_cmd("add", "somefile"), report=False)
+
+    run = runner(yadm_cmd("commit", "-m", "msg"))
     assert run.success
     assert run.err == ""
     linked = utils.parse_alt_output(run.out)
@@ -354,6 +359,26 @@ def test_stale_link_removal(runner, yadm_cmd, paths):
 
 
 @pytest.mark.usefixtures("ds1_copy")
+def test_deleted_file_link_removal(runner, yadm_cmd, paths):
+    """Link to deleted file is removed"""
+
+    utils.create_alt_files(paths, "##default")
+    run = runner(yadm_cmd("alt", "-d"))
+    assert run.success
+
+    # Remove one alt file
+    run = runner(yadm_cmd("rm", TEST_PATHS[0] + "##default"))
+    assert run.success
+    run = runner(yadm_cmd("commit", "-m", "remove"))
+    assert run.success
+
+    # And verify that the symlink has been removed
+    link_file = paths.work.join(TEST_PATHS[0])
+    with pytest.raises(OSError):
+        link_file.lstat()
+
+
+@pytest.mark.usefixtures("ds1_copy")
 def test_legacy_dir_link_removal(runner, yadm_cmd, paths):
     """Legacy link to alternative dir is removed
 
@@ -414,6 +439,8 @@ def test_template_overwrite_symlink(runner, yadm_cmd, paths, tst_sys):
     assert run.success
     assert run.err == ""
     assert run.out == ""
+    run = runner(yadm_cmd("commit", "-m", "msg"))
+    assert run.success
     assert not link.islink()
     assert target.read().strip() == "target"
     assert link.read().strip() == "test-data"
@@ -432,6 +459,8 @@ def test_ensure_alt_path(runner, paths, style):
     assert run.success
     assert run.err == ""
     assert run.out == ""
+    run = runner([paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "commit", "-m", "msg"])
+    assert run.success
     assert paths.work.join(filename).read().strip() == "test-data"
 
 

@@ -32,12 +32,12 @@ def test_config_read_missing(runner, yadm_cmd):
     """Read missing attribute
 
     Display an empty value
-    Exit with 0
+    Exit with 1
     """
 
     run = runner(yadm_cmd("config", TEST_KEY))
 
-    assert run.success
+    assert not run.success
     assert run.err == ""
     assert run.out == ""
 

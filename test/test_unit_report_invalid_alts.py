@@ -22,7 +22,7 @@ def test_report_invalid_alts(runner, yadm, valid, previous):
         report_invalid_alts
     """
     run = runner(command=["bash"], inp=script)
-    assert run.success
+    assert run.success == (valid and not previous)
     assert run.out == ""
     if not valid and not previous:
         assert "WARNING" in run.err

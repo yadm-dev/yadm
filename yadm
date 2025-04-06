@@ -74,6 +74,7 @@ USE_CYGPATH=0
 
 # flag when something may have changes (which prompts auto actions to be performed)
 CHANGES_POSSIBLE=0
+OLD_HEAD=""
 
 # flag when a bootstrap should be performed after cloning
 # 0: skip auto_bootstrap, 1: ask, 2: perform bootstrap, 3: prevent bootstrap
@@ -100,7 +101,6 @@ function main() {
   [ -d "$YADM_DATA" ] || mkdir -p "$YADM_DATA"
 
   # parse command line arguments
-  local retval=0
   internal_commands="^(alt|bootstrap|clean|clone|config|decrypt|encrypt|enter|git-crypt|help|--help|init|introspect|list|perms|transcrypt|upgrade|version|--version)$"
   if [ -z "$*" ]; then
     # no argumnts will result in help()
@@ -152,8 +152,9 @@ function main() {
     HOOK_COMMAND="$1"
     invoke_hook "pre"
     git_command "$@"
-    retval="$?"
   fi
+
+  local retval="$?"
 
   # process automatic events
   auto_alt
@@ -573,6 +574,13 @@ function alt() {
     tracked_files+=("$tracked_file")
   done
 
+  if [ -n "$OLD_HEAD" ]; then
+    for deleted_file in \
+      $("$GIT_PROGRAM" diff --diff-filter=D --no-renames --name-only "$OLD_HEAD.." -- ':/*##*'); do
+      tracked_files+=("${deleted_file/\##/##~u.$local_user,}")
+    done
+  fi
+
   local alt_targets=()
   local alt_sources=()
   local alt_scores=()
@@ -603,8 +611,8 @@ function alt() {
       target="$target$suffix"
     fi
 
-    # Remove target if it's a symlink pointing at source
-    if [ -L "$target" ] && [ "$target" -ef "$source" ]; then
+    # Remove target if it's a symlink pointing at source or a dangling symlink
+    if [ -L "$target" ] && { [ "$target" -ef "$source" ] || [ ! -e "$target" ]; }; then
       rm -f "$target"
     fi
 
@@ -618,7 +626,7 @@ function alt() {
 }
 
 function report_invalid_alts() {
-  [ "$LEGACY_WARNING_ISSUED" = "1" ] && return
+  [ "$LEGACY_WARNING_ISSUED" = "1" ] && return 1
   [ "${#INVALID_ALT[@]}" = "0" ] && return
   local path_list=""
   local invalid
@@ -649,6 +657,8 @@ ${path_list}
 ***********
 EOF
   printf '%s\n' "$msg" >&2
+
+  return 1
 }
 
 function set_local_alt_values() {
@@ -909,11 +919,11 @@ EOF
 
     require_repo
 
+    CHANGES_POSSIBLE=1
+
     # operate on the yadm repo's configuration file
     # this is always local to the machine
     "$GIT_PROGRAM" config "$@"
-
-    CHANGES_POSSIBLE=1
 
   else
     # make sure parent folder of config file exists
@@ -1120,17 +1130,21 @@ function enter() {
   GIT_WORK_TREE="$YADM_WORK"
   export GIT_WORK_TREE
 
+  OLD_HEAD="$("$GIT_PROGRAM" rev-parse HEAD 2>/dev/null)"
+
   [ "${#shell_cmd[@]}" -eq 0 ] && echo "Entering yadm repo"
 
   yadm_prompt="yadm shell ($YADM_REPO) $shell_path > "
   PROMPT="$yadm_prompt" PS1="$yadm_prompt" "$SHELL" "${shell_opts[@]}" "${shell_cmd[@]}"
-  return_code="$?"
+  local return_code="$?"
 
-  if [ "${#shell_cmd[@]}" -eq 0 ]; then
-    echo "Leaving yadm repo"
-  else
-    exit_with_hook "$return_code"
-  fi
+  [ "${#shell_cmd[@]}" -eq 0 ] && echo "Leaving yadm repo"
+
+  local new_head
+  new_head="$("$GIT_PROGRAM" rev-parse HEAD 2>/dev/null)"
+  [ "$OLD_HEAD" != "$new_head" ] && CHANGES_POSSIBLE=1
+
+  return "$return_code"
 }
 
 function git_command() {
@@ -1154,12 +1168,18 @@ function git_command() {
     fi
   fi
 
-  CHANGES_POSSIBLE=1
+  OLD_HEAD="$("$GIT_PROGRAM" rev-parse HEAD 2>/dev/null)"
 
   # pass commands through to git
   debug "Running git command $GIT_PROGRAM $*"
   "$GIT_PROGRAM" "$@"
-  return "$?"
+  local return_code="$?"
+
+  local new_head
+  new_head="$("$GIT_PROGRAM" rev-parse HEAD 2>/dev/null)"
+  [ "$OLD_HEAD" != "$new_head" ] && CHANGES_POSSIBLE=1
+
+  return "$return_code"
 }
 
 function help() {
@@ -1363,6 +1383,7 @@ function perms() {
   chmod -f go-rwx ${GLOBS[@]} &>/dev/null
   # TODO: detect and report changing permissions in a portable way
 
+  return 0
 }
 
 function upgrade() {
@@ -1871,8 +1892,8 @@ function invoke_hook() {
   exit_status="$2"
   hook_command="${YADM_HOOKS}/${mode}_$HOOK_COMMAND"
 
-  if [ -x "$hook_command" ] ||
-    { [[ $OPERATING_SYSTEM == MINGW* ]] && [ -f "$hook_command" ]; }; then
+  if [ -f "$hook_command" ] &&
+    { [ -x "$hook_command" ] || [[ $OPERATING_SYSTEM == MINGW* ]]; }; then
     debug "Invoking hook: $hook_command"
 
     # expose some internal data to all hooks
@@ -1886,6 +1907,7 @@ function invoke_hook() {
 
     # pack array to export it; filenames including a newline character (\n)
     # are NOT supported
+    parse_encrypt
     YADM_ENCRYPT_INCLUDE_FILES=$(join_string $'\n' "${ENCRYPT_INCLUDE_FILES[@]}")
 
     export YADM_HOOK_COMMAND
@@ -2102,10 +2124,11 @@ function auto_perms() {
 
 function auto_bootstrap() {
 
-  bootstrap_available || return
-
   [ "$DO_BOOTSTRAP" -eq 0 ] && return
   [ "$DO_BOOTSTRAP" -eq 3 ] && return
+
+  bootstrap_available || return 0
+
   [ "$DO_BOOTSTRAP" -eq 2 ] && bootstrap
   if [ "$DO_BOOTSTRAP" -eq 1 ]; then
     echo "Found $YADM_BOOTSTRAP"

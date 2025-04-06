@@ -35,13 +35,15 @@ def test_perms(runner, yadm_cmd, paths, ds1, autoperms):
     for private in privatepaths + insecurepaths:
         assert not oct(private.stat().mode).endswith("00"), "Path started secured"
 
-    cmd = "perms"
+    cmd = ["perms"]
     if autoperms != "notest":
-        cmd = "status"
-    run = runner(yadm_cmd(cmd), env={"HOME": paths.work})
+        run = runner(yadm_cmd("add", "efile1"), report=False)
+        assert run.success
+        cmd = ["-c", "user.name=Yadm", "commit", "-m", "msg"]
+    run = runner(yadm_cmd(*cmd), env={"HOME": paths.work})
     assert run.success
     assert run.err == ""
-    if cmd == "perms":
+    if autoperms == "notest":
         assert run.out == ""
 
     # these paths should be secured if processing perms
