@@ -569,7 +569,7 @@ function alt() {
   # determine all tracked files
   local tracked_files=()
   local IFS=$'\n'
-  for tracked_file in $("$GIT_PROGRAM" ls-files -- '*##*'); do
+  for tracked_file in $("$GIT_PROGRAM" ls-files --recurse-submodules -- '*##*'); do
     tracked_files+=("$tracked_file")
   done
 
@@ -1490,64 +1490,87 @@ function update_exclude() {
   auto_exclude=$(config --bool yadm.auto-exclude)
   [ "$auto_exclude" == "false" ] && return 0
 
-  local exclude_path="${YADM_REPO}/info/exclude"
   local newline=$'\n'
 
-  local part_path="$exclude_path.yadm-$1"
-  local part_str
-  part_str=$(join_string "$newline" "${@:2}")
+  while IFS='' read -r submodule; do
+    local exclude_path="${YADM_REPO}${submodule:+/modules/}${submodule}/info/exclude"
 
-  if [ -e "$part_path" ]; then
-    if [ "$part_str" = "$(<"$part_path")" ]; then
-      return
-    fi
-
-    rm -f "$part_path"
-  elif [ -z "$part_str" ]; then
-    return
-  fi
-
-  if [ -n "$part_str" ]; then
-    assert_parent "$part_path"
-    cat >"$part_path" <<<"$part_str"
-  fi
-
-  local exclude_flag="# yadm-auto-excludes"
-
-  local exclude_header="${exclude_flag}${newline}"
-  exclude_header="${exclude_header}# This section is managed by yadm."
-  exclude_header="${exclude_header}${newline}"
-  exclude_header="${exclude_header}# Any edits below will be lost."
-  exclude_header="${exclude_header}${newline}"
-
-  # read info/exclude
-  local unmanaged=""
-  local managed=""
-  if [ -e "$exclude_path" ]; then
-    local -i flag_seen=0
-    local line
-    while IFS='' read -r line || [ -n "$line" ]; do
-      [ "$line" = "$exclude_flag" ] && flag_seen=1
-      if ((flag_seen)); then
-        managed="${managed}${line}${newline}"
-      else
-        unmanaged="${unmanaged}${line}${newline}"
+    local part_path="$exclude_path.yadm-$1"
+    local part_str=""
+    if [ -z "$submodule" ]; then
+      part_str=$(join_string "$newline" "${@:2}")
+    else
+      for part in "${@:2}"; do
+        if [ "${part#/"${submodule}"/}" != "$part" ]; then
+          part_str="${part_str}${part#/"${submodule}"}${newline}"
+        fi
+      done
+      if [ -n "$part_str" ]; then
+        part_str="${part_str:0:-1}"
       fi
-    done <"$exclude_path"
-  fi
-
-  local exclude_str=""
-  for suffix in alt encrypt; do
-    if [ -e "${exclude_path}.yadm-$suffix" ]; then
-      local header="# yadm $suffix$newline"
-      exclude_str="$exclude_str$header$(<"$exclude_path".yadm-"$suffix")"
     fi
-  done
 
-  if [ "${exclude_header}${exclude_str}${newline}" != "$managed" ]; then
-    debug "Updating ${exclude_path}"
-    cat >"$exclude_path" <<<"${unmanaged}${exclude_header}${exclude_str}"
-  fi
+    if [ -e "$part_path" ]; then
+      if [ "$part_str" = "$(<"$part_path")" ]; then
+        continue
+      fi
+
+      rm -f "$part_path"
+    elif [ -z "$part_str" ]; then
+      continue
+    fi
+
+    if [ -n "$part_str" ]; then
+      if [ -n "$submodule" ] && [ ! -d "${YADM_REPO}/modules/$submodule" ]; then
+        echo "Warning: not updating exclude for submodule '$submodule';" \
+          "consider running 'yadm submodule absorbgitdirs'"
+        continue
+      fi
+      assert_parent "$part_path"
+      cat >"$part_path" <<<"$part_str"
+    fi
+
+    local exclude_flag="# yadm-auto-excludes"
+
+    local exclude_header="${exclude_flag}${newline}"
+    exclude_header="${exclude_header}# This section is managed by yadm."
+    exclude_header="${exclude_header}${newline}"
+    exclude_header="${exclude_header}# Any edits below will be lost."
+    exclude_header="${exclude_header}${newline}"
+
+    # read info/exclude
+    local unmanaged=""
+    local managed=""
+    if [ -e "$exclude_path" ]; then
+      local -i flag_seen=0
+      local line
+      while IFS='' read -r line || [ -n "$line" ]; do
+        [ "$line" = "$exclude_flag" ] && flag_seen=1
+        if ((flag_seen)); then
+          managed="${managed}${line}${newline}"
+        else
+          unmanaged="${unmanaged}${line}${newline}"
+        fi
+      done <"$exclude_path"
+    fi
+
+    local exclude_str=""
+    for suffix in alt encrypt; do
+      if [ -e "${exclude_path}.yadm-$suffix" ]; then
+        local header="# yadm $suffix$newline"
+        exclude_str="$exclude_str$header$(<"$exclude_path".yadm-"$suffix")"
+      fi
+    done
+
+    if [ "${exclude_header}${exclude_str}${newline}" != "$managed" ]; then
+      debug "Updating ${exclude_path}"
+      cat >"$exclude_path" <<<"${unmanaged}${exclude_header}${exclude_str}"
+    fi
+  done <<<"$(
+    echo ""
+    "$GIT_PROGRAM" -C "$YADM_WORK" submodule --quiet \
+      foreach --recursive "echo \$displaypath"
+  )"
 
   return 0
 }

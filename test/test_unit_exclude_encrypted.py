@@ -34,6 +34,7 @@ def test_exclude_encrypted(runner, tmpdir, yadm, encrypt_exists, auto_exclude, e
     script = f"""
         YADM_TEST=1 source {yadm}
         {config_function}
+        GIT_PROGRAM=true
         DEBUG=1
         YADM_ENCRYPT="{encrypt_file}"
         YADM_REPO="{repo_dir}"

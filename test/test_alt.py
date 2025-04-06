@@ -55,6 +55,50 @@ def test_alt_source(runner, paths, tracked, encrypt, exclude, yadm_alt):
 
 
 @pytest.mark.usefixtures("ds1_copy")
+def test_alt_submodule(runner, paths, yadm_cmd):
+    """Test alt handling in submodule"""
+
+    yadm_dir, yadm_data = setup_standard_yadm_dir(paths)
+
+    # Create alt files in separate alt dir
+    alt_dir = yadm_dir.join("alt")
+    utils.create_alt_files(paths, "##default", tracked=False, yadm_alt=True, yadm_dir=yadm_dir)
+
+    # Make alt dir be a separate repo
+    runner(["git", "init", alt_dir], report=False)
+    runner(["git", "-C", alt_dir, "add", "."], report=False)
+    run = runner(["git", "-C", alt_dir, "commit", "-m", "Add alt files"])
+    assert run.success
+
+    # And add it as a submodule
+    run = runner(
+        yadm_cmd("-Y", yadm_dir, "--yadm-data", yadm_data, "submodule", "add", "https://foobar/repo", alt_dir.basename),
+        cwd=alt_dir.dirname,
+    )
+    assert run.success
+
+    # Now when processing alt files
+    run = runner([paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "alt"])
+    assert run.success
+    assert run.err == ""
+    linked = utils.parse_alt_output(run.out)
+
+    # Then files in submodule are also handled
+    for link_path in TEST_PATHS:
+        source_file_content = link_path + "##default"
+        source_file = alt_dir.join(source_file_content)
+        link_file = paths.work.join(link_path)
+        if link_path == utils.ALT_DIR:
+            source_file = source_file.join(utils.CONTAINED)
+            link_file = link_file.join(utils.CONTAINED)
+        assert link_file.islink()
+        target = py.path.local(os.path.realpath(link_file))
+        assert target.isfile()
+        assert link_file.read() == source_file_content
+        assert str(source_file) in linked
+
+
+@pytest.mark.usefixtures("ds1_copy")
 @pytest.mark.parametrize("yadm_alt", [True, False], ids=["alt", "worktree"])
 def test_relative_link(runner, paths, yadm_alt):
     """Confirm links created are relative"""
