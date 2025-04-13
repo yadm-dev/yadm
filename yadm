@@ -1785,7 +1785,12 @@ function configure_paths() {
   # obtain YADM_WORK from repo if it exists
   if [ -d "$GIT_DIR" ]; then
     local work
+    # It's possible this is a relative path, in which case it's relative to $GIT_DIR:
+    # https://git-scm.com/docs/git-config#Documentation/git-config.txt-coreworktree
     work=$(unix_path "$("$GIT_PROGRAM" config core.worktree)")
+    if [[ "$work" != /* ]]; then
+      work="$(cd "$GIT_DIR/$work" && pwd)"
+    fi
     [ -n "$work" ] && YADM_WORK="$work"
   fi
 
