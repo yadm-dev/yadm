@@ -37,7 +37,7 @@ def test_perms(runner, yadm_cmd, paths, ds1, autoperms):
 
     cmd = "perms"
     if autoperms != "notest":
-        cmd = "status"
+        cmd = "reset"
     run = runner(yadm_cmd(cmd), env={"HOME": paths.work})
     assert run.success
     assert run.err == ""

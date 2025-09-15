@@ -29,11 +29,10 @@ def test_pdirs_missing(runner, yadm_cmd, paths, home):
     if home:
         env["HOME"] = paths.work
 
-    # run status
-    run = runner(command=yadm_cmd("status"), env=env)
+    # run reset
+    run = runner(command=yadm_cmd("reset"), env=env)
     assert run.success
     assert run.err == ""
-    assert "On branch master" in run.out
 
     # confirm directories are created
     # and are protected
@@ -48,7 +47,7 @@ def test_pdirs_missing(runner, yadm_cmd, paths, home):
     # confirm directories are created before command is run:
     if home:
         assert re.search(
-            r"Creating.+\.(gnupg|ssh).+Creating.+\.(gnupg|ssh).+Running git command git status", run.out, re.DOTALL
+            r"Creating.+\.(gnupg|ssh).+Creating.+\.(gnupg|ssh).+Running git command git reset", run.out, re.DOTALL
         ), "directories created before command is run"
 
 
@@ -71,11 +70,11 @@ def test_pdirs_missing_apd_false(runner, yadm_cmd, paths):
     # set configuration
     os.system(" ".join(yadm_cmd("config", "--bool", "yadm.auto-private-dirs", "false")))
 
-    # run status
-    run = runner(command=yadm_cmd("status"))
+    # run reset
+    run = runner(command=yadm_cmd("reset"))
     assert run.success
     assert run.err == ""
-    assert "On branch master" in run.out
+    assert run.out == ""
 
     # confirm directories are STILL missing
     for pdir in PRIVATE_DIRS:
@@ -102,11 +101,11 @@ def test_pdirs_exist_apd_false(runner, yadm_cmd, paths):
     # set configuration
     os.system(" ".join(yadm_cmd("config", "--bool", "yadm.auto-perms", "false")))
 
-    # run status
-    run = runner(command=yadm_cmd("status"))
+    # run reset
+    run = runner(command=yadm_cmd("reset"))
     assert run.success
     assert run.err == ""
-    assert "On branch master" in run.out
+    assert run.out == ""
 
     # created directories are STILL permissive
     for pdir in PRIVATE_DIRS:
