@@ -248,7 +248,7 @@ def test_auto_alt(runner, yadm_cmd, paths, autoalt):
         os.system(" ".join(yadm_cmd("config", "yadm.auto-alt", autoalt)))
 
     utils.create_alt_files(paths, "##default")
-    run = runner(yadm_cmd("status"))
+    run = runner(yadm_cmd("reset"))
     assert run.success
     assert run.err == ""
     linked = utils.parse_alt_output(run.out)

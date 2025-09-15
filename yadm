@@ -1143,18 +1143,23 @@ function git_command() {
   fi
 
   # ensure private .ssh and .gnupg directories exist first
-  # TODO: consider restricting this to only commands which modify the work-tree
+   declare -A non_modify
+  for nm_command in bisect blame bugreport cat-file check-attr check-ignore check-mailmap check-ref-format cherry column count-objects cvsexportcommit csvserver daemon describe diff-files diff-index diff difftool diff-tree fast-export fetch for-each-ref fsck get-tar-commit-id grep hash-object help http-backend http-fetch http-push imap-send instaweb log ls-files ls-remote ls-tree mailinfo name-rev push range-diff reflog remote request-pull rev-list rev-parse send-mail send-pack shortlog show-branch show-index show-ref show status var verify-commit verify-pack version whatchanged; do
+    non_modify["$nm_command"]=1
+  done
 
-  if [ "$YADM_WORK" = "$HOME" ]; then
-    auto_private_dirs=$(config --bool yadm.auto-private-dirs)
-    if [ "$auto_private_dirs" != "false" ]; then
-      for pdir in $(private_dirs all); do
-        assert_private_dirs "$pdir"
-      done
+  if [ -z "${non_modify["$1"]}" ]; then
+    if [ "$YADM_WORK" = "$HOME" ]; then
+      auto_private_dirs=$(config --bool yadm.auto-private-dirs)
+      if [ "$auto_private_dirs" != "false" ]; then
+        for pdir in $(private_dirs all); do
+          assert_private_dirs "$pdir"
+        done
+      fi
     fi
-  fi
 
-  CHANGES_POSSIBLE=1
+    CHANGES_POSSIBLE=1
+  fi
 
   # pass commands through to git
   debug "Running git command $GIT_PROGRAM $*"
