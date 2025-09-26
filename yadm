@@ -603,12 +603,12 @@ function alt() {
       target="$target$suffix"
     fi
 
-    # Remove target if it's a symlink pointing at source
-    if [ -L "$target" ] && [ "$target" -ef "$source" ]; then
+    score_file "$source" "$target" "$conditions"
+
+    # Remove target if it's a symlink pointing at source with score 0 (stale)
+    if [ -L "$target" ] && [ "$target" -ef "$source" ] && [ "$score" -eq 0 ]; then
       rm -f "$target"
     fi
-
-    score_file "$source" "$target" "$conditions"
   done
 
   local alt_linked=()
@@ -704,6 +704,12 @@ function alt_linking() {
     local target="${alt_targets[$index]}"
     local source="${alt_sources[$index]}"
     local template_processor="${alt_template_processors[$index]}"
+
+    if [ -L "$target" ] && [ "$target" -ef "$source" ] && [ "$do_copy" -eq 0 ]; then
+      $log "Keeping $target; already linked to $source"
+      exclude+=("${target#"$YADM_WORK"}")
+      continue
+    fi
 
     if [ -L "$target" ]; then
       rm -f "$target"
