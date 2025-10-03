@@ -442,3 +442,34 @@ def setup_standard_yadm_dir(paths):
     std_yadm_data.join("repo.git").mksymlinkto(paths.repo, absolute=1)
     std_yadm_dir.join("encrypt").mksymlinkto(paths.encrypt, absolute=1)
     return std_yadm_dir, std_yadm_data
+
+
+@pytest.mark.usefixtures("ds1_copy")
+def test_alt_preserves_user_symlink_when_no_alt_tracked(runner, paths):
+    """Issue #236: User symlinks preserved when no yadm alternate is tracked."""
+    yadm_dir, yadm_data = setup_standard_yadm_dir(paths)
+    user_target = paths.work.join("user_target")
+    user_target.write("user-data")
+    link_file = paths.work.join(utils.ALT_FILE1)
+    link_file.mksymlinkto(user_target)
+    # now test-file -> user_target
+    alt_file = yadm_dir.join("alt").join(f"{utils.ALT_FILE1}##default")
+    alt_file.write("alt-data", ensure=True)
+    run = runner([paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "alt"])
+    assert run.success
+    assert os.path.realpath(str(link_file)) == str(user_target)
+    assert link_file.read() == "user-data"
+
+
+@pytest.mark.usefixtures("ds1_copy")
+def test_alt_skips_correct_symlink_without_touching(runner, paths):
+    """Optimization: yadm alt skips already-correct symlinks (no filesystem ops)."""
+    yadm_dir, yadm_data = setup_standard_yadm_dir(paths)
+    alt_file = yadm_dir.join("alt").join(f"{utils.ALT_FILE1}##default")
+    alt_file.write("alt-data", ensure=True)
+    runner([paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "add", alt_file])
+    runner([paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "alt"])
+    link_file = paths.work.join(utils.ALT_FILE1)
+    mtime_before = link_file.lstat().mtime
+    runner([paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "alt"])
+    assert link_file.lstat().mtime == mtime_before
