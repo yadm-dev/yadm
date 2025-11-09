@@ -1,29 +1,36 @@
-#!/bin/bash
+#!/bin/sh
 
 # Save this file as ~/.config/yadm/bootstrap and make it executable. It will
 # execute all executable files (excluding templates and editor backups) in the
 # ~/.config/yadm/bootstrap.d directory when run.
 
-set -eu
+set -e
 
 # Directory to look for bootstrap executables in
-BOOTSTRAP_D="${BASH_SOURCE[0]}.d"
+# Works in sh, bash, and zsh
+if [ -n "${BASH_SOURCE:-}" ]; then
+    BOOTSTRAP_D="${BASH_SOURCE[0]}.d"
+else
+    BOOTSTRAP_D="${0}.d"
+fi
 
-if [[ ! -d "$BOOTSTRAP_D" ]]; then
+if [ ! -d "$BOOTSTRAP_D" ]; then
     echo "Error: bootstrap directory '$BOOTSTRAP_D' not found" >&2
     exit 1
 fi
 
-declare -a bootstraps
-while IFS= read -r bootstrap; do
-    if [[ -x "$bootstrap" && ! "$bootstrap" =~ "##" && ! "$bootstrap" =~ ~$ ]]; then
-        bootstraps+=("$bootstrap")
-    fi
-done < <(find -L "$BOOTSTRAP_D" -type f | sort)
+# Find and execute bootstrap files
+find -L "$BOOTSTRAP_D" -type f | sort | while IFS= read -r bootstrap; do
+    # Skip non-executable files, editor backups (~), and templates (##)
+    if [ -x "$bootstrap" ]; then
+        case "$bootstrap" in
+            *\##*|*~) continue ;;
+        esac
 
-for bootstrap in "${bootstraps[@]}"; do
-    if ! "$bootstrap"; then
-        echo "Error: bootstrap '$bootstrap' failed" >&2
-        exit 1
+        if ! "$bootstrap"; then
+            echo "Error: bootstrap '$bootstrap' failed" >&2
+            exit 1
+        fi
     fi
 done
+
