@@ -2,6 +2,7 @@
 
 import os
 import string
+import subprocess
 
 import py
 import pytest
@@ -442,3 +443,39 @@ def setup_standard_yadm_dir(paths):
     std_yadm_data.join("repo.git").mksymlinkto(paths.repo, absolute=1)
     std_yadm_dir.join("encrypt").mksymlinkto(paths.encrypt, absolute=1)
     return std_yadm_dir, std_yadm_data
+
+
+@pytest.mark.usefixtures("ds1_copy")
+def test_alt_concurrent(runner, paths):
+    """Confirm concurrent 'yadm alt' runs do not report link errors
+
+    Two yadm processes racing on the same alternate must both succeed. Without
+    'ln -n' the loser writes into the directory the destination link points at,
+    and without 'ln -f' it reports "File exists" instead of replacing the link.
+    """
+    yadm_dir, yadm_data = setup_standard_yadm_dir(paths)
+    utils.create_alt_files(paths, "##default", yadm_dir=yadm_dir)
+
+    yadm_alt = [paths.pgm, "-Y", yadm_dir, "--yadm-data", yadm_data, "alt"]
+    env = {"GIT_DIR": str(paths.repo)}
+
+    processes = [
+        subprocess.Popen(yadm_alt, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={**os.environ, **env})
+        for _ in range(2)
+    ]
+    errors = []
+    for process in processes:
+        _, err = process.communicate()
+        assert process.returncode == 0
+        errors.append(err.decode())
+
+    assert "ln:" not in "".join(errors)
+
+    for link_path in TEST_PATHS:
+        link_file = paths.work.join(link_path)
+        source_file = paths.work.join(link_path + "##default")
+        if link_path == utils.ALT_DIR:
+            link_file = link_file.join(utils.CONTAINED)
+            source_file = source_file.join(utils.CONTAINED)
+        assert link_file.islink()
+        assert py.path.local(os.path.realpath(link_file)) == py.path.local(os.path.realpath(source_file))

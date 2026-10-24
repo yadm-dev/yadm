@@ -740,7 +740,7 @@ function ln_relative() {
   local rel_source
   rel_source=$(relative_path "$(builtin_dirname "$target")" "$source")
 
-  ln -s "$rel_source" "$target"
+  ln -nfs "$rel_source" "$target"
   alt_linked+=("$rel_source")
 }
 
